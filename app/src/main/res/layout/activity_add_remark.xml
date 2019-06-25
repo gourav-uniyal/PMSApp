@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="20dp" >
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textSize="25dp"
+        android:text="Add Remark"
+        android:textColor="#000"
+        />
+
+    <EditText
+        android:id="@+id/txt_remark"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:ems="10"
+        android:hint="Your Remark"
+        android:textColorHint="#D3D3D3"
+        android:textColor="#000"
+        android:inputType="textMultiLine"
+        android:minLines="3" >
+
+        <requestFocus/>
+    </EditText>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/lbl_save_remark"
+        android:text="Save"
+        android:textSize="19dp"
+        android:layout_gravity="center"
+        android:textColor="@color/colorPrimary"
+        />
+
+</LinearLayout>

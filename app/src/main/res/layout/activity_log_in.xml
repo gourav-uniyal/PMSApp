@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fitsSystemWindows="true"
+    android:orientation="vertical"
+    android:layout_centerInParent="true"
+    tools:context=".activity.LogInActivity">
+
+    <TextView
+        android:layout_marginLeft="35dp"
+        android:layout_marginTop="115dp"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Log In"
+        android:textSize="40dp"
+        android:textColor="#000"
+        tools:layout_editor_absoluteX="81dp"
+        tools:layout_editor_absoluteY="151dp"
+        tools:ignore="MissingConstraints" />
+
+    <LinearLayout
+        android:layout_gravity="center"
+        android:layout_marginTop="50dp"
+        android:layout_width="300dp"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <EditText
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textSize="20dp"
+            android:id="@+id/txt_email"
+            android:hint="Email"
+            android:textColorHint="#000"
+            android:textColor="#000" />
+
+        <EditText
+            android:layout_marginTop="10dp"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textSize="20dp"
+            android:id="@+id/txt_password"
+            android:hint="Password"
+            android:inputType="textPassword"
+            android:textColorHint="#000"
+            android:textColor="#000" />
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_marginTop="50dp"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:orientation="vertical">
+
+        <Button
+            android:layout_width="300dp"
+            android:layout_height="50dp"
+            android:id="@+id/btn_login"
+            android:text="Login"
+            android:textColor="#ffffff"
+            android:background="@drawable/rectangle_item_layout"
+            android:backgroundTint="@color/colorPrimary"
+            />
+    </LinearLayout>
+
+</LinearLayout>
