@@ -24,7 +24,8 @@
 
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="match_parent"
+        android:layout_marginBottom="59dp"
         android:layout_marginTop="59dp"
         android:orientation="vertical">
 
@@ -94,5 +95,22 @@
         </android.support.v7.widget.RecyclerView>
 
     </LinearLayout>
+
+    <ProgressBar
+        android:id="@+id/progress_bar_photo"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:visibility="gone"/>
+
+    <Button
+        android:id="@+id/btn_photo_verification_completed"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textAlignment="center"
+        android:background="@color/colorPrimary"
+        android:text="Verification Completed"
+        android:textColor="#fff"
+        android:layout_gravity="bottom"/>
 
     </android.support.design.widget.CoordinatorLayout>

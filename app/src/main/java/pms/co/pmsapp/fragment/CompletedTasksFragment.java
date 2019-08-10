@@ -6,6 +6,7 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.v4.app.Fragment;
+import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
@@ -14,73 +15,116 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Toast;
 
-import com.android.volley.Request;
-import com.android.volley.Response;
-import com.android.volley.toolbox.JsonObjectRequest;
-
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
+import com.google.gson.Gson;
 
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.Objects;
 
 import pms.co.pmsapp.R;
 import pms.co.pmsapp.activity.PhotoActivity;
 import pms.co.pmsapp.adapter.MainAdapter;
+import pms.co.pmsapp.interfaces.ApiInterface;
+import pms.co.pmsapp.libs.ApiClient;
 import pms.co.pmsapp.model.Case;
-import pms.co.pmsapp.utils.AppController;
-import pms.co.pmsapp.utils.EndPoints;
+import pms.co.pmsapp.model.ResponseData;
+import pms.co.pmsapp.model.ResponseTask;
+import pms.co.pmsapp.model.Verifier;
 import pms.co.pmsapp.utils.RecyclerTouchListener;
 import pms.co.pmsapp.utils.SimpleDividerItemDecoration;
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
 
 public class CompletedTasksFragment extends Fragment {
 
-    private static final String TAG = CompletedTasksFragment.class.getSimpleName();
+    //region Variable Declaration
+    private static final String TAG = CompletedTasksFragment.class.getSimpleName( );
     private Context context;
     private ArrayList<Case> arrayList;
-    private MainAdapter mainAdapter;
-    private RecyclerView recyclerView;
     private String verifier;
-    private String status;
+    private MainAdapter mainAdapter;
+    public int PAGE_START = 1;
+    public int TOTAL_PAGE = 1;
+    public int CURRENT_PAGE = PAGE_START;
     private ProgressDialog progressDialog;
+    private RecyclerView recyclerView;
+    //endregion
 
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
 
-        View view = inflater.inflate(R.layout.fragment_completed_tasks, container, false);
-        context = getActivity();
+        View view = inflater.inflate( R.layout.fragment_completed_tasks, container, false );
+        context = getActivity( );
 
-        progressDialog = new ProgressDialog(context);
-        progressDialog.setTitle("Loading");
-        progressDialog.setMessage("Please Wait...");
+        verifier = getArguments( ).getString( "verifier" );
 
-        recyclerView = (RecyclerView) view.findViewById(R.id.rvCompletedTasks);
-        verifier = getArguments().getString("verifier");
-        arrayList = new ArrayList<>();
-        LinearLayoutManager linearLayoutManager = new LinearLayoutManager(context);
+        //region Progress Dialog
+        progressDialog = new ProgressDialog( context );
+        progressDialog.setTitle( "Loading" );
+        progressDialog.setMessage( "Please Wait..." );
+        progressDialog.setCanceledOnTouchOutside( true );
+        //endregion
+
+        //region SwipeRefresh Layout
+        SwipeRefreshLayout swipeRefreshLayout = view.findViewById( R.id.swipe_refresh_layout_completed_task );
+        swipeRefreshLayout.setOnRefreshListener( new SwipeRefreshLayout.OnRefreshListener( ) {
+            @Override
+            public void onRefresh() {
+                progressDialog.show( );
+                arrayList.clear( );
+                getData( PAGE_START );
+            }
+        });
+        //endregion
+
+        arrayList = new ArrayList<>( );
+
+        LinearLayoutManager linearLayoutManager = new LinearLayoutManager( context );
         linearLayoutManager.setOrientation( LinearLayoutManager.VERTICAL );
-        getData();
 
-        recyclerView.setLayoutManager(linearLayoutManager);
-        recyclerView.addItemDecoration(new SimpleDividerItemDecoration(context));
-        recyclerView.addOnItemTouchListener(new RecyclerTouchListener(context, recyclerView, new RecyclerTouchListener.ClickListener() {
+        recyclerView = (RecyclerView) view.findViewById( R.id.rvCompletedTasks );
+        recyclerView.setLayoutManager( linearLayoutManager );
+        recyclerView.addItemDecoration( new SimpleDividerItemDecoration( context ) );
+
+        getData( PAGE_START );
+
+        mainAdapter = new MainAdapter( arrayList );
+        recyclerView.setAdapter( mainAdapter );
+
+        recyclerView.addOnScrollListener( new RecyclerView.OnScrollListener( ) {
+            @Override
+            public void onScrolled(@NonNull RecyclerView recyclerView, int dx, int dy) {
+                super.onScrolled( recyclerView, dx, dy );
+                int lastVisibleItem = 0;
+                int totalItemCount = Objects.requireNonNull( recyclerView.getAdapter( ) ).getItemCount( );
+                lastVisibleItem = ((LinearLayoutManager) Objects.requireNonNull( recyclerView.getLayoutManager( ) )).findLastVisibleItemPosition( );
+                if (PAGE_START < TOTAL_PAGE) {
+                    if (lastVisibleItem == totalItemCount - 1) {
+                        progressDialog.show();
+                        ++CURRENT_PAGE;
+                        getData( CURRENT_PAGE );
+                    }
+                }
+            }
+        } );
+
+        recyclerView.addOnItemTouchListener( new RecyclerTouchListener( context, recyclerView, new RecyclerTouchListener.ClickListener( ) {
             @Override
             public void onClick(View view, int position) {
-                String docId = arrayList.get(position).getDocId();
-                String path = arrayList.get(position).getPath();
-                String formPath = arrayList.get(position).getFormpath();
-                String fileId = arrayList.get(position).getFileId();
-                Intent intent = new Intent(context, PhotoActivity.class);
-                intent.putExtra("document_id", docId);
-                intent.putExtra("path", path);
-                intent.putExtra("form_path", formPath);
-                intent.putExtra("fileId", fileId);
-                startActivity(intent);
+                String docId = arrayList.get( position ).getDocId( );
+                String path = arrayList.get( position ).getPath( );
+                String formPath = arrayList.get( position ).getFormpath( );
+                String fileId = arrayList.get( position ).getFileId( );
+                Intent intent = new Intent( context, PhotoActivity.class );
+                intent.putExtra( "document_id", docId );
+                intent.putExtra( "path", path );
+                intent.putExtra( "form_path", formPath );
+                intent.putExtra( "fileId", fileId );
+                intent.putExtra( "status", "complete" );
+                intent.putExtra( "verifier", verifier );
+                startActivity( intent );
             }
-
             @Override
             public void onLongClick(View view, int position) {
 
@@ -90,76 +134,38 @@ public class CompletedTasksFragment extends Fragment {
         return view;
     }
 
-    private void getData() {
+    private void getData(int page) {
 
-        Map<String, String> params = new HashMap<>();
-        params.put("verifier", verifier);
+        progressDialog.show( );
 
-        final JSONObject jsonObject1 = new JSONObject(params);
+        Verifier veri = new Verifier();
+        veri.setVerifier(verifier);
 
-        progressDialog.show();
-
-        JsonObjectRequest jsonObjectRequest = new JsonObjectRequest(Request.Method.POST, EndPoints.COMPLETED_TASK_API,
-                jsonObject1, new Response.Listener<JSONObject>() {
-
+        ApiInterface apiInterface = ApiClient.getRetrofitInstance().create( ApiInterface.class );
+        Call<ResponseTask> call = apiInterface.completedTask( veri, page);
+        call.enqueue( new Callback<ResponseTask>( ) {
             @Override
-            public void onResponse(JSONObject response) {
-
-                progressDialog.dismiss();
-
-                try {
-                    Log.v(TAG, "Response" + response.toString());
-                    status = response.getString("status");
-                    Log.v(TAG, "VolleySuccess" + status);
-
-                    if (status.equals("success")) {
-
-                        JSONArray jsonArray = new JSONArray(response.getString("data"));
-
-                        Log.v(TAG, "JsonArray" + jsonArray.toString());
-
-                        for (int i = 0; i < jsonArray.length(); i++) {
-
-                            JSONObject jsonObject = (jsonArray.getJSONObject(i));
-
-                            Case data = new Case();
-                            data.setFileId(jsonObject.getString("file_id"));
-                            data.setClientId(jsonObject.getString("client_id"));
-                            data.setDate(jsonObject.getString("created_at"));
-                            data.setSubject(jsonObject.getString("subject"));
-                            data.setCustomerName( jsonObject.getString("customer_name") );
-
-                            JSONObject jsonObject1 = (JSONObject) jsonArray.getJSONObject(i).get("client");
-                            data.setClientName(jsonObject1.getString("name"));
-
-                            JSONArray jsonArray1 = jsonObject.getJSONArray("documents");
-                            if (jsonArray1 != null) {
-                                for (int j = 0; j < jsonArray1.length(); j++) {
-                                    data.setDocId(jsonArray1.getJSONObject(j).getString("id"));
-                                    data.setVerification(jsonArray1.getJSONObject(j).getString("verification_point"));
-                                    data.setPath(jsonArray1.getJSONObject(j).getString("path"));
-                                    data.setFormpath(jsonArray1.getJSONObject(j).getString("form_path"));
-                                    arrayList.add(data);
-                                }
-                            }
-                        }
-                        mainAdapter = new MainAdapter(arrayList);
-                        recyclerView.setAdapter(mainAdapter);
-
-                    } else {
-                        Toast.makeText(context, "Failed to load data", Toast.LENGTH_SHORT).show();
+            public void onResponse(Call<ResponseTask> call, Response<ResponseTask> response) {
+                ResponseTask responseTask = response.body();
+                if(responseTask.getResponseData()!=null){
+                    ResponseData responseData = responseTask.getResponseData();
+                    Log.v(TAG, responseTask.getStatus());
+                    if(responseData.getCaseArrayList()!=null){
+                        TOTAL_PAGE = Integer.parseInt(responseData.getTotalPage());
+                        arrayList.addAll(responseData.getCaseArrayList());
+                        mainAdapter.notifyDataSetChanged();
+                        progressDialog.dismiss();
                     }
 
-                } catch (JSONException e) {
-                    e.printStackTrace();
                 }
             }
-        }, new Response.ErrorListener() {
             @Override
-            public void onErrorResponse(com.android.volley.VolleyError error) {
-                progressDialog.dismiss();
+            public void onFailure(Call<ResponseTask> call, Throwable t) {
+                Toast.makeText( getActivity(), "Error on loading Response", Toast.LENGTH_SHORT ).show();
             }
-        });
-        AppController.getInstance().addToRequestQueue(jsonObjectRequest);
+        } );
+
     }
+
+
 }

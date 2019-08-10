@@ -4,6 +4,7 @@ import android.Manifest;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
+import android.os.Handler;
 import android.support.annotation.NonNull;
 import android.support.design.widget.TabLayout;
 import android.support.v4.app.ActivityCompat;
@@ -24,6 +25,7 @@ import pms.co.pmsapp.fragment.CompletedTasksFragment;
 import pms.co.pmsapp.fragment.IncompleteTasksFragment;
 import pms.co.pmsapp.model.Case;
 import pms.co.pmsapp.service.CheckLocationService;
+import pms.co.pmsapp.utils.AppPreferences;
 
 public class HomeActivity extends AppCompatActivity {
 
@@ -32,12 +34,16 @@ public class HomeActivity extends AppCompatActivity {
     private TabLayout tabLayout;
     private String verifier;
     private ViewPagerAdapter viewPagerAdapter;
+    private boolean doubleBackToExitPressedOnce = false;
+    private static long back_pressed;
+    private AppPreferences appPreferences;
     //endregion
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_home);
+
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
@@ -46,20 +52,25 @@ public class HomeActivity extends AppCompatActivity {
         viewPager = findViewById(R.id.pager);
         tabLayout = findViewById(R.id.tabLayout);
 
+        appPreferences = new AppPreferences( this );
+
         Bundle bundle = new Bundle();
         bundle.putString("verifier", verifier);
 
+        //region Fragment Setup
         CompletedTasksFragment completedTasksFragment = new CompletedTasksFragment();
         completedTasksFragment.setArguments(bundle);
         IncompleteTasksFragment incompleteTasksFragment = new IncompleteTasksFragment();
         incompleteTasksFragment.setArguments(bundle);
+        //endregion
 
+        //region ViewPager Setup
         viewPagerAdapter = new ViewPagerAdapter(getSupportFragmentManager());
         viewPagerAdapter.addFragment(completedTasksFragment, "Completed Tasks");
         viewPagerAdapter.addFragment(incompleteTasksFragment, "Incomplete Tasks");
-
         viewPager.setAdapter(viewPagerAdapter);
         tabLayout.setupWithViewPager(viewPager);
+        //endregion
 
         ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION,
                 Manifest.permission.CAMERA, Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.READ_EXTERNAL_STORAGE}, 1);
@@ -83,7 +94,6 @@ public class HomeActivity extends AppCompatActivity {
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-
         getMenuInflater().inflate(R.menu.home_menu, menu);
         return true;
     }
@@ -91,10 +101,21 @@ public class HomeActivity extends AppCompatActivity {
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         int id = item.getItemId();
-        if (id == R.id.action_settings) {
+        if (id == R.id.action_log_out) {
+            appPreferences.clear();
+            startActivity( new Intent( this, LogInActivity.class ) );
+            finish();
             return true;
         }
 
         return super.onOptionsItemSelected(item);
+    }
+
+    @Override
+    public void onBackPressed()
+    {
+        if (back_pressed + 1500 > System.currentTimeMillis()) super.onBackPressed();
+        else Toast.makeText(getBaseContext(), "Press once again to exit!", Toast.LENGTH_SHORT).show();
+        back_pressed = System.currentTimeMillis();
     }
 }

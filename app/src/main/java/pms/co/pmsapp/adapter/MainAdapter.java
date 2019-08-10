@@ -40,9 +40,7 @@ public class MainAdapter extends RecyclerView.Adapter<MainAdapter.ViewHolder> {
 
     @Override
     public void onBindViewHolder(@NonNull MainAdapter.ViewHolder viewHolder, int i) {
-
         Case data = arrayList.get(i);
-
         if (i % 2 == 0) {
             viewHolder.linearLayout.setBackgroundResource(R.color.home_row_grey);
         } else {
@@ -59,7 +57,6 @@ public class MainAdapter extends RecyclerView.Adapter<MainAdapter.ViewHolder> {
         viewHolder.lblVerification.setText(data.getVerification());
         viewHolder.lblSubject.setText(data.getSubject());
         viewHolder.lblDocumentName.setText(data.getDocName());
-
     }
 
     @Override
@@ -107,10 +104,7 @@ public class MainAdapter extends RecyclerView.Adapter<MainAdapter.ViewHolder> {
         } catch (ParseException e) {
             e.printStackTrace();
         }
-
-        Log.v(TAG, "Date" + str);
         str = str.replace("-", " ");
-        Log.v(TAG, "DATEdin" + str);
         return str;
     }
 

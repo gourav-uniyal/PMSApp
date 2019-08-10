@@ -26,6 +26,7 @@ import com.android.volley.NetworkResponse;
 import com.android.volley.Request;
 import com.android.volley.Response;
 import com.android.volley.VolleyError;
+import com.android.volley.toolbox.JsonObjectRequest;
 import com.bumptech.glide.Glide;
 
 import org.json.JSONArray;
@@ -53,7 +54,7 @@ public class PhotoAdapter extends RecyclerView.Adapter<PhotoAdapter.ViewHolder> 
     private String upload = "false", remarks;
     private String docId;
     private Context context;
-    private int index;
+    private int index, totalItem, uploadedItem;
     private DatabaseHelper db;
     private String latLong;
     private boolean multiSelect = false;
@@ -77,6 +78,7 @@ public class PhotoAdapter extends RecyclerView.Adapter<PhotoAdapter.ViewHolder> 
         @Override
         public boolean onActionItemClicked(ActionMode mode, MenuItem item) {
             for (String selectedItem : selectedItemArray) {
+                deleteFileFromDB( selectedItem );
                 File file = new File( selectedItem );
                 file.delete( );
                 arrayList.remove( selectedItem );
@@ -125,6 +127,9 @@ public class PhotoAdapter extends RecyclerView.Adapter<PhotoAdapter.ViewHolder> 
                 uploadOnServer( arrayList.get( index ) );
                 String newdata = updateDBUploaded( docId, arrayList.get( index ), "true" );
                 db.updateImages( docId, newdata);
+                getTotalUploads();
+                Log.v(TAG, "totalItem: " +totalItem+ "& uploaded:" + uploadedItem);
+                sendTotalEntryRepo();
             }
         } );
     }
@@ -290,6 +295,26 @@ public class PhotoAdapter extends RecyclerView.Adapter<PhotoAdapter.ViewHolder> 
         return update;
     }
 
+    public void deleteFileFromDB(String imageName){
+        Cursor cursor = db.fetchdatabase( docId );
+        String images = null;
+        if (cursor.moveToFirst( ))
+            images = cursor.getString( cursor.getColumnIndex( "images" ) );
+        try {
+            JSONArray jsonArray = new JSONArray( images );
+            Log.v(TAG, "json"+ jsonArray.toString());
+            for (int i = 0; i < jsonArray.length( ); i++) {
+                JSONObject jsonObject = (jsonArray.getJSONObject( i ));
+                if (jsonObject.getString( "name" ).equals( imageName )) {
+                    jsonArray.remove( i );
+                }
+            }
+            Log.v( TAG, "json"+ jsonArray.toString() );
+        } catch (JSONException e) {
+            e.printStackTrace( );
+        }
+    }
+
     public String getRemarks(String docId){
         String remarks=null;
         Cursor cursor = db.fetchdatabase( docId );
@@ -321,5 +346,54 @@ public class PhotoAdapter extends RecyclerView.Adapter<PhotoAdapter.ViewHolder> 
 
         return lat_long;
     }
+
+    public void getTotalUploads(){
+        Cursor cursor = db.fetchdatabase( docId );
+        String images = null;
+        if (cursor.moveToFirst( ))
+            images = cursor.getString( cursor.getColumnIndex( "images" ) );
+        if (images != null)
+            try {
+                JSONArray jsonArray1 = new JSONArray( images );
+                for (int i = 0; i < jsonArray1.length( ); i++) {
+                    totalItem = jsonArray1.length();
+                    JSONObject jsonObject = (jsonArray1.getJSONObject( i ));
+                    if (!jsonObject.getString( "isUploaded" ).equals("false"))
+                        ++uploadedItem;
+                }
+            } catch (JSONException e) {
+                e.printStackTrace( );
+            }
+    }
+
+    public void sendTotalEntryRepo(){
+        Map<String, String> params = new HashMap<>( );
+        params.put("total_images", String.valueOf(totalItem));
+        params.put("uploaded_images", String.valueOf( uploadedItem ));
+        params.put( "document_id", docId );
+        JSONObject jsonObject1 = new JSONObject( params );
+        JsonObjectRequest jsonObjectRequest = new JsonObjectRequest( Request.Method.POST, EndPoints.TOTAL_IMAGES, jsonObject1, new Response.Listener<JSONObject>( ) {
+            @Override
+            public void onResponse(JSONObject response) {
+                try {
+                    String status;
+                    Log.v( TAG, "Response:" + response.toString( ) );
+                    status = response.getString( "status" );
+                    if (status.equals( "success" )) {
+                        Log.v(TAG, "totalentry status: "+ status);
+                    }
+                } catch (JSONException e) {
+                    e.printStackTrace( );
+                }
+            }
+        }, new Response.ErrorListener( ) {
+            @Override
+            public void onErrorResponse(VolleyError error) {
+                Log.v( TAG, "VolleyError: " + error.getLocalizedMessage( ) );
+            }
+        } );
+        AppController.getInstance( ).addToRequestQueue( jsonObjectRequest );
+    }
+
 
 }

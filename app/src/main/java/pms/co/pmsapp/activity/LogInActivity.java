@@ -25,10 +25,12 @@ import java.util.HashMap;
 import java.util.Map;
 import pms.co.pmsapp.R;
 import pms.co.pmsapp.utils.AppController;
+import pms.co.pmsapp.utils.AppPreferences;
 import pms.co.pmsapp.utils.EndPoints;
 
 public class LogInActivity extends AppCompatActivity {
 
+    //region Variable Declaration
     private Button btnLogin;
     private String TAG = LogInActivity.class.getSimpleName();
     private EditText txt_email;
@@ -36,11 +38,20 @@ public class LogInActivity extends AppCompatActivity {
     private String status;
     private String user_id;
     private ProgressDialog progressDialog;
+    //endregiong
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate( savedInstanceState );
         setContentView( R.layout.activity_log_in );
+
+        final AppPreferences appPreferences = new AppPreferences( this );
+        if (appPreferences.getEmail() != null) {
+            Intent intent = new Intent(getApplicationContext(), HomeActivity.class);
+            intent.putExtra( "verifier", appPreferences.getName() );
+            startActivity( intent );
+            finish();
+        }
 
         btnLogin = findViewById( R.id.btn_login );
         txt_email = findViewById( R.id.txt_email );
@@ -69,42 +80,32 @@ public class LogInActivity extends AppCompatActivity {
                     isEmptyField = true;
                     txt_email.setError("required");
                 }
-
                 if (TextUtils.isEmpty(password)){
                     isEmptyField = true;
                     txt_password.setError("required");
                 }
-
                 if (!email.contains("@")) {
                     txt_email.setError("this doesn't look like an email id");
                     isEmptyField = true;
                 }
-
                 if (!isEmptyField) {
-
-                    Log.v( TAG, "Email" + email);
-                    Log.v( TAG, "Password" + password);
-
                     Map<String , String> params = new HashMap<>(  );
                     params.put("email", email);
                     params.put("password", password);
-
                     JSONObject jsonObject = new JSONObject(params);
-
                     JsonObjectRequest jsonObjectRequest = new JsonObjectRequest( Request.Method.POST, EndPoints.LOGIN_API, jsonObject, new Response.Listener<JSONObject>( ) {
                         @Override
                         public void onResponse(JSONObject response) {
-
                             try {
                                 Log.v(TAG, "Response:" + response.toString());
                                 status = response.getString("status");
                                 Log.v(TAG, "VolleySuccess" + status);
-                                JSONObject jsonObject1 = new JSONObject( response.getString( "data" ) );
-                                user_id = jsonObject1.getString( "id" );
-                                Log.v("verifier", user_id);
-
                                 if (status.equals("success")) {
                                     progressDialog.dismiss();
+                                    JSONObject jsonObject1 = new JSONObject( response.getString( "data" ) );
+                                    user_id = jsonObject1.getString( "id" );
+                                    appPreferences.setEmail( jsonObject1.getString( "email" ) );
+                                    appPreferences.setName( user_id );
                                     Toast.makeText(getApplicationContext(), "Login user successful", Toast.LENGTH_SHORT).show();
                                     Intent intent = new Intent(getApplicationContext(), HomeActivity.class);
                                     intent.putExtra( "verifier" , user_id);
@@ -115,7 +116,6 @@ public class LogInActivity extends AppCompatActivity {
                                     progressDialog.dismiss();
                                     Toast.makeText(getApplicationContext(), "Email or Password is Incorrect", Toast.LENGTH_SHORT).show();
                                 }
-
                             } catch (JSONException e) {
                                 progressDialog.dismiss();
                                 e.printStackTrace();

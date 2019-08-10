@@ -29,7 +29,6 @@ public class CheckLocationService extends Service {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         // Let it continue running until it is stopped.
-        Toast.makeText(this, "Service Started", Toast.LENGTH_LONG).show();
         IntentFilter filter = new IntentFilter();
         filter.addAction(CONNECTIVITY_CHANGE_ACTION);
         filter.addAction(LOCATION_CHANGED);
@@ -44,7 +43,6 @@ public class CheckLocationService extends Service {
 
                         if(!ConnectionHelper.isConnected(context) && !ConnectionHelper.isGpsEnabled(context)){
                             Log.i("NETWORK123", "Connection lost");
-                            Toast.makeText(getApplicationContext(), "Gps and Network is off!", Toast.LENGTH_SHORT).show();
                             Intent intent1 = new Intent(context, DialogActivity.class);
                             intent1.putExtra("key1", "Location and Internet Services are Disabled. Enable them to use this App.");
                             intent1.putExtra("key2", "0");
@@ -54,7 +52,6 @@ public class CheckLocationService extends Service {
 
                         else if (!ConnectionHelper.isGpsEnabled(context)) {
                             Log.i("NETWORK123", "GPS Connection lost");
-                            Toast.makeText(getApplicationContext(), "GPS is off!", Toast.LENGTH_SHORT).show();
                             Intent intent1 = new Intent(context, DialogActivity.class);
                             intent1.putExtra("key1", "Location Services are Disabled or GPS may be off. Put Location service to High Accuracy to use this App");
                             intent1.putExtra("key2", "1");
@@ -64,7 +61,6 @@ public class CheckLocationService extends Service {
 
                         else if (!ConnectionHelper.isConnected(context)) {
                             Log.i("NETWORK123", "Connection lost");
-                            Toast.makeText(getApplicationContext(), "Disconnected Network!", Toast.LENGTH_SHORT).show();
                             Intent intent1 = new Intent(context, DialogActivity.class);
                             intent1.putExtra("key1", "Internet Services are Disabled. Enable them to use this App");
                             intent1.putExtra("key2", "2");
@@ -77,7 +73,6 @@ public class CheckLocationService extends Service {
                         intent2.addFlags(FLAG_ACTIVITY_NEW_TASK );
                         sendBroadcast(intent2);
                         Log.i("NETWORK123", "Both Connected");
-                        Toast.makeText(getApplicationContext(), "Both Connected!", Toast.LENGTH_SHORT).show();
                     }
                 }
             }
@@ -95,6 +90,5 @@ public class CheckLocationService extends Service {
             e.printStackTrace();
         }
         super.onDestroy();
-        Toast.makeText(this, "Service Destroyed", Toast.LENGTH_LONG).show();
     }
 }

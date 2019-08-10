@@ -10,6 +10,7 @@ import android.view.View;
 import android.widget.ImageView;
 
 import com.bumptech.glide.Glide;
+import com.github.chrisbanes.photoview.PhotoView;
 
 import java.io.File;
 
@@ -17,14 +18,15 @@ import pms.co.pmsapp.R;
 
 public class FullScreenActivity extends AppCompatActivity {
 
-    ImageView imageView;
-    String photo,photourl,docId;
+    PhotoView photoView;
+    String photo,photourl;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate( savedInstanceState );
         setContentView( R.layout.activity_full_screen );
 
+        //region Toolbar Setup
         Toolbar toolbar = (Toolbar) findViewById( R.id.toolbar_fullscreen);
         setSupportActionBar(toolbar);
         toolbar.setNavigationIcon(R.drawable.ic_arrow_back_black_24dp);
@@ -34,18 +36,19 @@ public class FullScreenActivity extends AppCompatActivity {
                 finish();
             }
         });
+        //endregion
 
+        photoView = findViewById( R.id.photo_view_full_screen );
 
         photo = getIntent().getStringExtra( "photo" );
         photourl = getIntent().getStringExtra( "photourl" );
-        imageView = findViewById( R.id.img_full_screen );
 
         if(photo!=null) {
             File file = new File( photo );
-            imageView.setImageURI( Uri.fromFile( file ) );
+            photoView.setImageURI( Uri.fromFile( file ) );
         }
         else if(photourl!=null)
-            Glide.with(getApplicationContext()).load(photourl).into(imageView);
+            Glide.with(getApplicationContext()).load(photourl).into(photoView);
 
     }
 }

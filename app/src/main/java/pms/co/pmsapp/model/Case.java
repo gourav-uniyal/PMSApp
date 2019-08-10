@@ -1,73 +1,58 @@
 package pms.co.pmsapp.model;
 
+import com.google.gson.annotations.SerializedName;
+
 public class Case {
 
+    @SerializedName( "file_id" )
     private String fileId;
+    @SerializedName( "subject" )
     private String subject;
+    @SerializedName( "client_id" )
     private String clientId;
+    @SerializedName("customer_name")
     private String customer_Name;
+    @SerializedName( "created_at" )
     private String date;
+    @SerializedName( "verification" )
     private String verification;
+    @SerializedName( "path" )
     private String path;
+    @SerializedName( "form_path" )
     private String formpath;
+    @SerializedName( "document_id" )
     private String docId;
+    @SerializedName( "document_name" )
     private String docName;
+    @SerializedName( "client" )
     private String clientName;
 
     public String getCustomerName() {
         return customer_Name;
     }
 
-    public void setCustomerName(String customer_id) {
-        this.customer_Name = customer_id;
-    }
-
     public String getClientName() {
         return clientName;
-    }
-
-    public void setClientName(String clientName) {
-        this.clientName = clientName;
     }
 
     public String getDocId() {
         return docId;
     }
 
-    public void setDocId(String docId) {
-        this.docId = docId;
-    }
-
     public String getFileId() {
         return fileId;
-    }
-
-    public void setFileId(String fileId) {
-        this.fileId = fileId;
     }
 
     public String getSubject() {
         return subject;
     }
 
-    public void setSubject(String subject) {
-        this.subject = subject;
-    }
-
     public String getClientId() {
         return clientId;
     }
 
-    public void setClientId(String clientId) {
-        this.clientId = clientId;
-    }
-
     public String getDate() {
         return date;
-    }
-
-    public void setDate(String date) {
-        this.date = date;
     }
 
     public String getPath() {
@@ -82,23 +67,12 @@ public class Case {
         return formpath;
     }
 
-    public void setFormpath(String formpath) {
-        this.formpath = formpath;
-    }
-
     public String getVerification() {
         return verification;
-    }
-
-    public void setVerification(String verification) {
-        this.verification = verification;
     }
 
     public String getDocName() {
         return docName;
     }
 
-    public void setDocName(String docName) {
-        this.docName = docName;
-    }
 }
