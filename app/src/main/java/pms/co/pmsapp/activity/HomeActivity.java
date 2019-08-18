@@ -12,6 +12,7 @@ import android.support.v4.view.ViewPager;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.Toast;
@@ -37,6 +38,7 @@ public class HomeActivity extends AppCompatActivity {
     private boolean doubleBackToExitPressedOnce = false;
     private static long back_pressed;
     private AppPreferences appPreferences;
+    private static final String TAG = "HomeActivity";
     //endregion
 
     @Override
@@ -48,6 +50,8 @@ public class HomeActivity extends AppCompatActivity {
         setSupportActionBar(toolbar);
 
         verifier = getIntent().getStringExtra("verifier");
+
+        Log.v(TAG, verifier);
 
         viewPager = findViewById(R.id.pager);
         tabLayout = findViewById(R.id.tabLayout);

@@ -105,10 +105,10 @@ public class LogInActivity extends AppCompatActivity {
                                     JSONObject jsonObject1 = new JSONObject( response.getString( "data" ) );
                                     user_id = jsonObject1.getString( "id" );
                                     appPreferences.setEmail( jsonObject1.getString( "email" ) );
-                                    appPreferences.setName( user_id );
+                                    appPreferences.setName(user_id );
                                     Toast.makeText(getApplicationContext(), "Login user successful", Toast.LENGTH_SHORT).show();
                                     Intent intent = new Intent(getApplicationContext(), HomeActivity.class);
-                                    intent.putExtra( "verifier" , user_id);
+                                    intent.putExtra( "verifier" ,user_id);
                                     startActivity(intent);
                                     finish();
                                 }

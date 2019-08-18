@@ -9,6 +9,7 @@ import android.support.v4.app.Fragment;
 import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -98,6 +99,7 @@ public class IncompleteTasksFragment extends Fragment  {
                 int totalItemCount = Objects.requireNonNull( recyclerView.getAdapter( ) ).getItemCount();
                 lastVisibleItem = ((LinearLayoutManager) Objects.requireNonNull( recyclerView.getLayoutManager( ) )).findLastVisibleItemPosition( );
                 if (PAGE_START < TOTAL_PAGE) {
+                    progressDialog.show();
                     if (lastVisibleItem == totalItemCount - 1) {
                         ++CURRENT_PAGE;
                         getData( CURRENT_PAGE );
@@ -131,12 +133,14 @@ public class IncompleteTasksFragment extends Fragment  {
     }
 
 
-    private void getData(int page) {
+    private void getData(final int page) {
 
         progressDialog.show( );
 
         Verifier veri = new Verifier();
         veri.setVerifier(verifier);
+
+        Log.v(TAG, verifier);
 
         ApiInterface apiInterface = ApiClient.getRetrofitInstance().create( ApiInterface.class );
         Call<ResponseTask> call = apiInterface.incompletedTask( veri, page);

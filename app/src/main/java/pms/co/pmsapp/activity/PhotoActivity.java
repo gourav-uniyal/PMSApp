@@ -87,7 +87,7 @@ public class PhotoActivity extends AppCompatActivity {
     private String verifier;
     private JSONArray jsonArray;
     private File  actualFile;
-    private int totalItem, uploadedItem;
+    private int totalItem=0, uploadedItem=0;
     private LocationRequest locationRequest;
     private FusedLocationProviderClient fusedLocationProviderClient;
     private ProgressBar progressBar;
@@ -104,6 +104,8 @@ public class PhotoActivity extends AppCompatActivity {
         //endregion
 
         verifier = getIntent().getStringExtra("verifier");
+
+        Log.v(TAG, verifier);
 
         fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient( getApplicationContext( ) );
 
@@ -163,11 +165,13 @@ public class PhotoActivity extends AppCompatActivity {
         if (images != null)
             try {
                 JSONArray jsonArray1 = new JSONArray( images );
+                String s;
+                totalItem = jsonArray1.length();
                 for (int i = 0; i < jsonArray1.length( ); i++) {
-                    totalItem = jsonArray1.length();
                     JSONObject jsonObject = (jsonArray1.getJSONObject( i ));
-                    if (!jsonObject.getString( "isUploaded" ).equals("false"))
-                        ++uploadedItem;
+                    s = jsonObject.getString( "isUploaded" );
+                    if (s.equals("true"))
+                        uploadedItem++;
                 }
             } catch (JSONException e) {
                 e.printStackTrace( );
@@ -235,12 +239,9 @@ public class PhotoActivity extends AppCompatActivity {
         lblAddPhotos.setOnClickListener( new View.OnClickListener( ) {
             @Override
             public void onClick(View view) {
-
                 Intent camera = new Intent( );
                 camera.setAction( MediaStore.ACTION_IMAGE_CAPTURE );
-
                 if (camera.resolveActivity( getPackageManager( ) ) != null) {
-
                     String newPicFile = docId + "_" + System.currentTimeMillis( ) + ".jpg";
                     actualFile = new File( folderpath + "/" + newPicFile );
                     if (actualFile != null) {
@@ -248,7 +249,6 @@ public class PhotoActivity extends AppCompatActivity {
                                 Uri.fromFile( actualFile ) );
                         startActivityForResult( camera, Request_Camera_Code );
                     }
-
                 }
             }
         } );
@@ -302,7 +302,7 @@ public class PhotoActivity extends AppCompatActivity {
                             public void onResponse(JSONObject response) {
                                 try {
                                     String status;
-                                    Log.v( TAG, "Response:" + response.toString( ) );
+                                    Log.v( TAG, "Verifiation Response:" + response.toString( ) );
                                     status = response.getString( "status" );
                                     if (status.equals( "success" )) {
                                         Toast.makeText( getApplicationContext( ), "Verification Completed", Toast.LENGTH_SHORT ).show( );
@@ -324,7 +324,6 @@ public class PhotoActivity extends AppCompatActivity {
                         } );
                         AppController.getInstance( ).addToRequestQueue( jsonObjectRequest );
                     }
-
                 } catch (JSONException e) {
                     e.printStackTrace( );
                 }
@@ -345,7 +344,7 @@ public class PhotoActivity extends AppCompatActivity {
             public void onResponse(JSONObject response) {
                 try {
                     String status;
-                    Log.v( TAG, "Response:" + response.toString( ) );
+                    Log.v( TAG, "Total Entry Response:" + response.toString( ) );
                     status = response.getString( "status" );
                     if (status.equals( "success" )) {
                         Log.v(TAG, "totalentry status: "+ status);

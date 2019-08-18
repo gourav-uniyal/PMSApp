@@ -240,7 +240,7 @@ public class PhotoAdapter extends RecyclerView.Adapter<PhotoAdapter.ViewHolder> 
                 new Response.Listener<NetworkResponse>( ) {
                     @Override
                     public void onResponse(NetworkResponse response) {
-                        Log.v( TAG, "REsponse:" + new String(response.data) );
+                        Log.v( TAG, "Upload REsponse:" + new String(response.data) );
                     }
                 },
                 new Response.ErrorListener( ) {
@@ -355,11 +355,13 @@ public class PhotoAdapter extends RecyclerView.Adapter<PhotoAdapter.ViewHolder> 
         if (images != null)
             try {
                 JSONArray jsonArray1 = new JSONArray( images );
+                totalItem = jsonArray1.length();
+                String s;
                 for (int i = 0; i < jsonArray1.length( ); i++) {
-                    totalItem = jsonArray1.length();
                     JSONObject jsonObject = (jsonArray1.getJSONObject( i ));
-                    if (!jsonObject.getString( "isUploaded" ).equals("false"))
-                        ++uploadedItem;
+                    s = jsonObject.getString( "isUploaded" );
+                    if (s.equals("true"))
+                        uploadedItem++;
                 }
             } catch (JSONException e) {
                 e.printStackTrace( );
@@ -377,7 +379,7 @@ public class PhotoAdapter extends RecyclerView.Adapter<PhotoAdapter.ViewHolder> 
             public void onResponse(JSONObject response) {
                 try {
                     String status;
-                    Log.v( TAG, "Response:" + response.toString( ) );
+                    Log.v( TAG, "Total Entry Response:" + response.toString( ) );
                     status = response.getString( "status" );
                     if (status.equals( "success" )) {
                         Log.v(TAG, "totalentry status: "+ status);

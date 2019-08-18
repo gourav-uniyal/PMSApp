@@ -141,6 +141,8 @@ public class CompletedTasksFragment extends Fragment {
         Verifier veri = new Verifier();
         veri.setVerifier(verifier);
 
+        Log.v(TAG, verifier);
+
         ApiInterface apiInterface = ApiClient.getRetrofitInstance().create( ApiInterface.class );
         Call<ResponseTask> call = apiInterface.completedTask( veri, page);
         call.enqueue( new Callback<ResponseTask>( ) {
@@ -149,7 +151,6 @@ public class CompletedTasksFragment extends Fragment {
                 ResponseTask responseTask = response.body();
                 if(responseTask.getResponseData()!=null){
                     ResponseData responseData = responseTask.getResponseData();
-                    Log.v(TAG, responseTask.getStatus());
                     if(responseData.getCaseArrayList()!=null){
                         TOTAL_PAGE = Integer.parseInt(responseData.getTotalPage());
                         arrayList.addAll(responseData.getCaseArrayList());
@@ -166,6 +167,4 @@ public class CompletedTasksFragment extends Fragment {
         } );
 
     }
-
-
 }
