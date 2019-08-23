@@ -7,20 +7,20 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.Bundle;
 import android.provider.Settings;
-import android.support.annotation.Nullable;
-import android.support.v7.app.AlertDialog;
-import android.support.v7.app.AppCompatActivity;
+import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.app.AppCompatActivity;
 
 public class DialogActivity extends AppCompatActivity {
 
     AlertDialog dialog;
+    BroadcastReceiver broadcastReceiver;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        BroadcastReceiver broadcastReceiver = new BroadcastReceiver() {
-
+        broadcastReceiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context arg0, Intent intent) {
                 String action = intent.getAction();
@@ -76,5 +76,11 @@ public class DialogActivity extends AppCompatActivity {
         if (requestCode == 0 )
             if (resultCode != RESULT_OK)
                 dialog.show();
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy( );
+        unregisterReceiver( broadcastReceiver );
     }
 }

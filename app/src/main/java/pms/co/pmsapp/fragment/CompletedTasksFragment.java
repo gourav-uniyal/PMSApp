@@ -4,22 +4,19 @@ import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
-import android.support.annotation.NonNull;
-import android.support.v4.app.Fragment;
-import android.support.v4.widget.SwipeRefreshLayout;
-import android.support.v7.widget.LinearLayoutManager;
-import android.support.v7.widget.RecyclerView;
+import androidx.annotation.NonNull;
+import androidx.fragment.app.Fragment;
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Toast;
-
-import com.google.gson.Gson;
-
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Objects;
-
 import pms.co.pmsapp.R;
 import pms.co.pmsapp.activity.PhotoActivity;
 import pms.co.pmsapp.adapter.MainAdapter;
@@ -28,7 +25,6 @@ import pms.co.pmsapp.libs.ApiClient;
 import pms.co.pmsapp.model.Case;
 import pms.co.pmsapp.model.ResponseData;
 import pms.co.pmsapp.model.ResponseTask;
-import pms.co.pmsapp.model.Verifier;
 import pms.co.pmsapp.utils.RecyclerTouchListener;
 import pms.co.pmsapp.utils.SimpleDividerItemDecoration;
 import retrofit2.Call;
@@ -48,6 +44,7 @@ public class CompletedTasksFragment extends Fragment {
     public int CURRENT_PAGE = PAGE_START;
     private ProgressDialog progressDialog;
     private RecyclerView recyclerView;
+    private SwipeRefreshLayout swipeRefreshLayout;
     //endregion
 
     @Override
@@ -67,7 +64,7 @@ public class CompletedTasksFragment extends Fragment {
         //endregion
 
         //region SwipeRefresh Layout
-        SwipeRefreshLayout swipeRefreshLayout = view.findViewById( R.id.swipe_refresh_layout_completed_task );
+        swipeRefreshLayout = view.findViewById( R.id.swipe_refresh_layout_completed_task );
         swipeRefreshLayout.setOnRefreshListener( new SwipeRefreshLayout.OnRefreshListener( ) {
             @Override
             public void onRefresh() {
@@ -81,7 +78,7 @@ public class CompletedTasksFragment extends Fragment {
         arrayList = new ArrayList<>( );
 
         LinearLayoutManager linearLayoutManager = new LinearLayoutManager( context );
-        linearLayoutManager.setOrientation( LinearLayoutManager.VERTICAL );
+        linearLayoutManager.setOrientation( RecyclerView.VERTICAL );
 
         recyclerView = (RecyclerView) view.findViewById( R.id.rvCompletedTasks );
         recyclerView.setLayoutManager( linearLayoutManager );
@@ -101,7 +98,6 @@ public class CompletedTasksFragment extends Fragment {
                 lastVisibleItem = ((LinearLayoutManager) Objects.requireNonNull( recyclerView.getLayoutManager( ) )).findLastVisibleItemPosition( );
                 if (PAGE_START < TOTAL_PAGE) {
                     if (lastVisibleItem == totalItemCount - 1) {
-                        progressDialog.show();
                         ++CURRENT_PAGE;
                         getData( CURRENT_PAGE );
                     }
@@ -137,11 +133,8 @@ public class CompletedTasksFragment extends Fragment {
     private void getData(int page) {
 
         progressDialog.show( );
-
-        Verifier veri = new Verifier();
-        veri.setVerifier(verifier);
-
-        Log.v(TAG, verifier);
+        HashMap<String, String> veri = new HashMap<>();
+        veri.put("verifier", verifier);
 
         ApiInterface apiInterface = ApiClient.getRetrofitInstance().create( ApiInterface.class );
         Call<ResponseTask> call = apiInterface.completedTask( veri, page);
@@ -156,8 +149,8 @@ public class CompletedTasksFragment extends Fragment {
                         arrayList.addAll(responseData.getCaseArrayList());
                         mainAdapter.notifyDataSetChanged();
                         progressDialog.dismiss();
+                        swipeRefreshLayout.setRefreshing( false );
                     }
-
                 }
             }
             @Override

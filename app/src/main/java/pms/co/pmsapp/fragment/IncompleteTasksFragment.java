@@ -4,11 +4,11 @@ import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
-import android.support.annotation.NonNull;
-import android.support.v4.app.Fragment;
-import android.support.v4.widget.SwipeRefreshLayout;
-import android.support.v7.widget.LinearLayoutManager;
-import android.support.v7.widget.RecyclerView;
+import androidx.annotation.NonNull;
+import androidx.fragment.app.Fragment;
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -16,6 +16,7 @@ import android.view.ViewGroup;
 import android.widget.Toast;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Objects;
 
 import pms.co.pmsapp.R;
@@ -80,7 +81,7 @@ public class IncompleteTasksFragment extends Fragment  {
         arrayList = new ArrayList<>();
 
         LinearLayoutManager linearLayoutManager = new LinearLayoutManager(context);
-        linearLayoutManager.setOrientation( LinearLayoutManager.VERTICAL );
+        linearLayoutManager.setOrientation( RecyclerView.VERTICAL );
 
         recyclerView = (RecyclerView) view.findViewById( R.id.rvIncompleteTasks );
         recyclerView.setLayoutManager(linearLayoutManager);
@@ -137,10 +138,8 @@ public class IncompleteTasksFragment extends Fragment  {
 
         progressDialog.show( );
 
-        Verifier veri = new Verifier();
-        veri.setVerifier(verifier);
-
-        Log.v(TAG, verifier);
+        HashMap<String, String> veri = new HashMap<>();
+        veri.put("verifier", verifier);
 
         ApiInterface apiInterface = ApiClient.getRetrofitInstance().create( ApiInterface.class );
         Call<ResponseTask> call = apiInterface.incompletedTask( veri, page);
@@ -154,6 +153,7 @@ public class IncompleteTasksFragment extends Fragment  {
                         TOTAL_PAGE = Integer.parseInt(responseData.getTotalPage());
                         arrayList.addAll(responseData.getCaseArrayList());
                         progressDialog.dismiss();
+                        swipeRefreshLayout.setRefreshing( false );
                     }
                     mainAdapter.notifyDataSetChanged();
                 }

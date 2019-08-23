@@ -24,6 +24,8 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
     private static final String DATABASE_NAME = "pms_db";
 
+    private static final String TAG = "DatabaseHelper";
+
     public DatabaseHelper(Context context) {
         super(context, DATABASE_NAME, null, DATABASE_VERSION);
     }
@@ -56,13 +58,14 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     public long updateImages(String docId, String imageDetail) {
         SQLiteDatabase db = this.getWritableDatabase();
 
+        Log.v("Db going to upload", imageDetail);
+
         ContentValues values = new ContentValues();
         values.put(DBModel.COLUMN_PATH, imageDetail);
 
         String[] args = new String[]{docId};
 
-        return db.update(DBModel.TABLE_NAME , values,    DBModel.COLUMN_DOC_ID + "=?", args);
-
+        return db.update(DBModel.TABLE_NAME , values, DBModel.COLUMN_DOC_ID + "=?", args);
     }
 
     public long updateRemark(String docId, String remark) {
@@ -73,7 +76,10 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
         String[] args = new String[]{docId};
 
-        return db.update(DBModel.TABLE_NAME, values, DBModel.COLUMN_DOC_ID +  "=?", args);
+        long id = db.update(DBModel.TABLE_NAME, values, DBModel.COLUMN_DOC_ID +  "=?", args);
+
+        db.close();
+        return  id;
     }
 
     public Cursor fetchdatabase(String docId){
@@ -86,10 +92,9 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
     public String displayDatabase(String docId){
         Cursor cursor = fetchdatabase( docId );
-        String images = null;
+        String images;
         if (cursor.moveToFirst( ))
             images = cursor.getString( cursor.getColumnIndex( "images" ) );
-
         else
             images= null;
 

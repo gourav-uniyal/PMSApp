@@ -3,14 +3,12 @@ package pms.co.pmsapp.adapter;
 import android.content.Context;
 import android.content.Intent;
 import android.database.Cursor;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.net.Uri;
-import android.support.annotation.NonNull;
-import android.support.v7.app.AppCompatActivity;
-import android.support.v7.view.ActionMode;
-import android.support.v7.widget.RecyclerView;
+import androidx.annotation.NonNull;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.view.ActionMode;
+import androidx.recyclerview.widget.RecyclerView;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -20,46 +18,40 @@ import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.RelativeLayout;
-import android.widget.Toast;
-
-import com.android.volley.NetworkResponse;
-import com.android.volley.Request;
-import com.android.volley.Response;
-import com.android.volley.VolleyError;
-import com.android.volley.toolbox.JsonObjectRequest;
 import com.bumptech.glide.Glide;
-
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
-
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Map;
-
+import okhttp3.MediaType;
+import okhttp3.MultipartBody;
+import okhttp3.RequestBody;
 import pms.co.pmsapp.activity.FullScreenActivity;
 import pms.co.pmsapp.R;
 import pms.co.pmsapp.database.DatabaseHelper;
-import pms.co.pmsapp.service.VolleyMultipartRequest;
-import pms.co.pmsapp.utils.AppController;
-import pms.co.pmsapp.utils.EndPoints;
+import pms.co.pmsapp.interfaces.ApiInterface;
+import pms.co.pmsapp.libs.ApiClient;
+import pms.co.pmsapp.model.ResponseImageUpload;
+import pms.co.pmsapp.model.ResponseTotalImages;
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
 
 public class PhotoAdapter extends RecyclerView.Adapter<PhotoAdapter.ViewHolder> {
 
     //region Variable Declaration
     private String TAG = PhotoAdapter.class.getSimpleName( );
     private ArrayList<String> arrayList;
-    private String upload = "false", remarks;
+    private String upload = "false";
     private String docId;
     private Context context;
-    private int index, totalItem, uploadedItem;
+    private int totalItem, uploadedItem;
     private DatabaseHelper db;
     private String latLong;
     private boolean multiSelect = false;
     private ArrayList<String> selectedItemArray = new ArrayList<String>( );
-    private Bitmap bitmap;
     //endregion
 
     private ActionMode.Callback actionModeCallbacks = new ActionMode.Callback( ) {
@@ -107,31 +99,31 @@ public class PhotoAdapter extends RecyclerView.Adapter<PhotoAdapter.ViewHolder> 
     @Override
     public ViewHolder onCreateViewHolder(@NonNull ViewGroup viewGroup, int i) {
         View v = LayoutInflater.from( viewGroup.getContext( ) ).inflate( R.layout.row_photo, viewGroup, false );
-        ViewHolder viewHolder = new ViewHolder( v);
+        ViewHolder viewHolder = new ViewHolder( v );
         return viewHolder;
     }
 
     @Override
-    public void onBindViewHolder(@NonNull final ViewHolder viewHolder, int i) {
-        viewHolder.update( arrayList.get( i ) );
-        index = viewHolder.getAdapterPosition();
-        upload = checkUpdate( docId, arrayList.get( index ) );
-        if(upload.equals( "true" ))
-            viewHolder.button.setVisibility( View.GONE );
-        else
-        viewHolder.button.setOnClickListener( new View.OnClickListener( ) {
+    public void onBindViewHolder(@NonNull ViewHolder viewHolder, int i) {
+        final ViewHolder viewHolder1 = viewHolder;
+        final String image = arrayList.get( i );
+        viewHolder1.update( image );
+        upload = checkUpdate( docId, image );
+
+        viewHolder1.button.setOnClickListener( new View.OnClickListener( ) {
             @Override
             public void onClick(View view) {
-                viewHolder.button.setVisibility( View.GONE );
-                index = viewHolder.getAdapterPosition();
-                uploadOnServer( arrayList.get( index ) );
-                String newdata = updateDBUploaded( docId, arrayList.get( index ), "true" );
-                db.updateImages( docId, newdata);
-                getTotalUploads();
-                Log.v(TAG, "totalItem: " +totalItem+ "& uploaded:" + uploadedItem);
-                sendTotalEntryRepo();
+                Log.v( TAG, "position: " + viewHolder1.getAdapterPosition( ) + "   images: " + image );
+                viewHolder1.button.setVisibility( View.GONE );
+                updateDBUploaded( docId, image );
+                uploadOnServer( image );
+                getTotalUploads( );
+                sendTotalEntryRepo( );
             }
         } );
+
+        if (upload.equals( "true" ))
+            viewHolder1.button.setVisibility( View.GONE );
     }
 
     @Override
@@ -176,7 +168,7 @@ public class PhotoAdapter extends RecyclerView.Adapter<PhotoAdapter.ViewHolder> 
             if (selectedItemArray.contains( imagePath )) {
                 relativeLayout.setBackgroundColor( Color.LTGRAY );
             } else {
-                relativeLayout.setBackgroundColor( Color.parseColor( "#eaeaea" ));
+                relativeLayout.setBackgroundColor( Color.parseColor( "#eaeaea" ) );
             }
             itemView.setOnLongClickListener( new View.OnLongClickListener( ) {
                 @Override
@@ -202,166 +194,107 @@ public class PhotoAdapter extends RecyclerView.Adapter<PhotoAdapter.ViewHolder> 
 
     }
 
-    public byte[] getFileDataFromDrawable(Bitmap bitmap) {
-
-        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream( );
-        bitmap.compress( Bitmap.CompressFormat.PNG, 80, byteArrayOutputStream );
-        return byteArrayOutputStream.toByteArray( );
-    }
-
     public String checkUpdate(String docId, String imageName) {
-        String upload = "";
-        String images = "";
-        Cursor cursor = db.fetchdatabase( docId );
-        if (cursor.moveToFirst( )) {
-            images = cursor.getString( cursor.getColumnIndex( "images" ) );
-        }
-        try {
-            JSONArray jsonArray = new JSONArray( images );
-            for (int i = 0; i < jsonArray.length( ); i++) {
-                if (jsonArray.getJSONObject( i ).getString( "name" ).equals( imageName ))
-                    upload = jsonArray.getJSONObject( i ).getString( "isUploaded" );
+        String images = db.displayDatabase( docId );
+        if (images != null) {
+            try {
+                JSONArray jsonArray = new JSONArray( images );
+                for (int i = 0; i < jsonArray.length( ); i++) {
+                    if (jsonArray.getJSONObject( i ).getString( "name" ).equals( imageName ))
+                        upload = jsonArray.getJSONObject( i ).getString( "isUploaded" );
+                    latLong = jsonArray.getJSONObject( i ).getString( "lat_long" );
+                }
+            } catch (JSONException e) {
+                Log.v( TAG, e.getLocalizedMessage( ) );
             }
-        } catch (JSONException e) {
-            Log.v( TAG, e.getLocalizedMessage( ) );
         }
         return upload;
     }
 
     public void uploadOnServer(String imagePath) {
 
-        Log.v(TAG , "upload this" + imagePath);
-        remarks = getRemarks( docId );
-        latLong = getLocation( docId , imagePath);
-        BitmapFactory.Options bmOptions = new BitmapFactory.Options( );
-        bitmap = BitmapFactory.decodeFile( imagePath, bmOptions );
+        Log.v( TAG, "upload this" + imagePath );
+        File file = new File(imagePath);
+        RequestBody mFile = RequestBody.create(MediaType.parse("image/*"), file);
+        MultipartBody.Part fileToUpload = MultipartBody.Part.createFormData("image", file.getName(), mFile);
+        RequestBody requestdocId = RequestBody.create( MediaType.parse("text/plain"), docId);
+        RequestBody requestLatLong = RequestBody.create( MediaType.parse( "text/plain" ), latLong );
 
-        VolleyMultipartRequest volleyMultipartRequest = new VolleyMultipartRequest( Request.Method.POST, EndPoints.UPLOAD_DATA_API,
-                new Response.Listener<NetworkResponse>( ) {
-                    @Override
-                    public void onResponse(NetworkResponse response) {
-                        Log.v( TAG, "Upload REsponse:" + new String(response.data) );
-                    }
-                },
-                new Response.ErrorListener( ) {
-                    @Override
-                    public void onErrorResponse(VolleyError error) {
-                        Log.v( TAG, "VolleyError:" + error.getLocalizedMessage( ) );
-                        Toast.makeText( context, error.getLocalizedMessage( ), Toast.LENGTH_LONG ).show( );
-                    }
-                } ) {
-
+        ApiInterface apiInterface = ApiClient.getRetrofitInstance().create( ApiInterface.class );
+        Call<ResponseImageUpload> call = apiInterface.uploadImage( requestdocId, requestLatLong, fileToUpload );
+        call.enqueue( new Callback<ResponseImageUpload>( ) {
             @Override
-            protected Map<String, String> getParams() {
-                Map<String, String> params = new HashMap<>( );
-                params.put( "document_id", docId );
-                params.put("lat_long", latLong);
-                return params;
+            public void onResponse(Call<ResponseImageUpload> call, Response<ResponseImageUpload> response) {
+                ResponseImageUpload responseImageUpload = response.body();
+                if(responseImageUpload.getStatus().equals("success"))
+                    Log.v(TAG, "Image Uploaded Successfully");
             }
-
             @Override
-            protected Map<String, DataPart> getByteData() {
-                Map<String, DataPart> params = new HashMap<>( );
-                long imageName = System.currentTimeMillis( );
-                params.put( "image", new DataPart( imageName + ".png", getFileDataFromDrawable( bitmap ) ) );
-                return params;
+            public void onFailure(Call<ResponseImageUpload> call, Throwable t) {
+                Log.v(TAG, "Image Upload Failed");
             }
-        };
-        AppController.getInstance( ).addToRequestQueue( volleyMultipartRequest );
-
+        } );
     }
 
-    public String updateDBUploaded(String docId, String imageName, String upload) {
+    public void updateDBUploaded(String docId, String imageName) {
         String update = "";
+        String images = db.displayDatabase( docId );
+        Log.d( TAG, "updateDBUploaded: " + images );
+        try {
+            JSONArray jsonArray = new JSONArray( images );
+            for (int i = 0; i < jsonArray.length( ); i++) {
+                JSONObject jsonObject = (jsonArray.getJSONObject( i ));
+                if (jsonObject.getString( "name" ).equals( imageName ) && jsonObject.getString( "isUploaded" ).equals( "false" )) {
+                    jsonObject.remove( "isUploaded" );
+                    jsonObject.put( "isUploaded", "true" );
+                    Log.d( TAG, "Changed " + imageName + " to true" );
+                }
+            }
+            update = jsonArray.toString( );
+            db.updateImages( docId, update );
+            Log.v( TAG, "Database Updated: " + db.displayDatabase( docId ) );
+        } catch (JSONException e) {
+            e.printStackTrace( );
+        }
+    }
+
+    public void deleteFileFromDB(String imageName) {
         Cursor cursor = db.fetchdatabase( docId );
         String images = null;
         if (cursor.moveToFirst( ))
             images = cursor.getString( cursor.getColumnIndex( "images" ) );
-
-        try {
-            JSONArray jsonArray = new JSONArray( images );
-            for (int i = 0; i < jsonArray.length( ); i++) {
-                JSONObject jsonObject = (jsonArray.getJSONObject( i ));
-                if (jsonObject.getString( "name" ).equals( imageName )&&jsonObject.getString( "isUploaded" ).equals("false")) {
-                    jsonObject.remove("isUploaded");
-                    jsonObject.put( "isUploaded", upload );
+        if (images != "")
+            try {
+                JSONArray jsonArray = new JSONArray( images );
+                Log.v( TAG, "json" + jsonArray.toString( ) );
+                for (int i = 0; i < jsonArray.length( ); i++) {
+                    JSONObject jsonObject = (jsonArray.getJSONObject( i ));
+                    if (jsonObject.getString( "name" ).equals( imageName )) {
+                        jsonArray.remove( i );
+                    }
                 }
+                Log.v( TAG, "json" + jsonArray.toString( ) );
+            } catch (JSONException e) {
+                e.printStackTrace( );
             }
-            update = jsonArray.toString();
-        } catch (JSONException e) {
-            e.printStackTrace( );
-        }
-
-        return update;
     }
 
-    public void deleteFileFromDB(String imageName){
-        Cursor cursor = db.fetchdatabase( docId );
-        String images = null;
-        if (cursor.moveToFirst( ))
-            images = cursor.getString( cursor.getColumnIndex( "images" ) );
-        try {
-            JSONArray jsonArray = new JSONArray( images );
-            Log.v(TAG, "json"+ jsonArray.toString());
-            for (int i = 0; i < jsonArray.length( ); i++) {
-                JSONObject jsonObject = (jsonArray.getJSONObject( i ));
-                if (jsonObject.getString( "name" ).equals( imageName )) {
-                    jsonArray.remove( i );
-                }
-            }
-            Log.v( TAG, "json"+ jsonArray.toString() );
-        } catch (JSONException e) {
-            e.printStackTrace( );
-        }
-    }
-
-    public String getRemarks(String docId){
-        String remarks=null;
-        Cursor cursor = db.fetchdatabase( docId );
-        if (cursor.moveToFirst( )) {
-            remarks= cursor.getString( cursor.getColumnIndex( "remarks" ) );
-        }
-        return remarks;
-    }
-
-    public String getLocation(String docId, String imageName){
-        String lat_long=null;
-        String images= null;
-        Cursor cursor = db.fetchdatabase( docId );
-        if (cursor.moveToFirst( )) {
-            images= cursor.getString( cursor.getColumnIndex( "images" ) );
-        }
-
-        try {
-            JSONArray jsonArray = new JSONArray( images );
-            for (int i = 0; i < jsonArray.length( ); i++) {
-                JSONObject jsonObject = (jsonArray.getJSONObject( i ));
-                if (jsonObject.getString( "name" ).equals( imageName )) {
-                    lat_long = jsonObject.getString( "lat_long");
-                }
-            }
-        } catch (JSONException e) {
-            e.printStackTrace( );
-        }
-
-        return lat_long;
-    }
-
-    public void getTotalUploads(){
+    public void getTotalUploads() {
         Cursor cursor = db.fetchdatabase( docId );
         String images = null;
         if (cursor.moveToFirst( ))
             images = cursor.getString( cursor.getColumnIndex( "images" ) );
         if (images != null)
             try {
+                uploadedItem = 0;
                 JSONArray jsonArray1 = new JSONArray( images );
-                totalItem = jsonArray1.length();
+                totalItem = jsonArray1.length( );
                 String s;
                 for (int i = 0; i < jsonArray1.length( ); i++) {
                     JSONObject jsonObject = (jsonArray1.getJSONObject( i ));
                     s = jsonObject.getString( "isUploaded" );
-                    if (s.equals("true"))
-                        uploadedItem++;
+                    if (!s.equals( "false" ))
+                        ++uploadedItem;
                 }
             } catch (JSONException e) {
                 e.printStackTrace( );
@@ -369,33 +302,27 @@ public class PhotoAdapter extends RecyclerView.Adapter<PhotoAdapter.ViewHolder> 
     }
 
     public void sendTotalEntryRepo(){
-        Map<String, String> params = new HashMap<>( );
+        HashMap<String, String> params = new HashMap<>( );
         params.put("total_images", String.valueOf(totalItem));
         params.put("uploaded_images", String.valueOf( uploadedItem ));
         params.put( "document_id", docId );
-        JSONObject jsonObject1 = new JSONObject( params );
-        JsonObjectRequest jsonObjectRequest = new JsonObjectRequest( Request.Method.POST, EndPoints.TOTAL_IMAGES, jsonObject1, new Response.Listener<JSONObject>( ) {
+        ApiInterface apiInterface = ApiClient.getRetrofitInstance().create( ApiInterface.class );
+        Call<ResponseTotalImages> call = apiInterface.totalImages(params);
+        call.enqueue( new Callback<ResponseTotalImages>( ) {
             @Override
-            public void onResponse(JSONObject response) {
-                try {
-                    String status;
-                    Log.v( TAG, "Total Entry Response:" + response.toString( ) );
-                    status = response.getString( "status" );
-                    if (status.equals( "success" )) {
-                        Log.v(TAG, "totalentry status: "+ status);
-                    }
-                } catch (JSONException e) {
-                    e.printStackTrace( );
+            public void onResponse(Call<ResponseTotalImages> call, retrofit2.Response<ResponseTotalImages> response) {
+                ResponseTotalImages responseTotalImages = response.body();
+                if(responseTotalImages.getStatus().equals( "success" )){
+                    Log.d( TAG, "Total Images: success" );
                 }
             }
-        }, new Response.ErrorListener( ) {
+
             @Override
-            public void onErrorResponse(VolleyError error) {
-                Log.v( TAG, "VolleyError: " + error.getLocalizedMessage( ) );
+            public void onFailure(Call<ResponseTotalImages> call, Throwable t) {
+                Log.d( TAG, "Total Images: error" );
             }
         } );
-        AppController.getInstance( ).addToRequestQueue( jsonObjectRequest );
-    }
 
+    }
 
 }
