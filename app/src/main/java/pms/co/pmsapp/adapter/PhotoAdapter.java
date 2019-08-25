@@ -2,7 +2,6 @@ package pms.co.pmsapp.adapter;
 
 import android.content.Context;
 import android.content.Intent;
-import android.database.Cursor;
 import android.graphics.Color;
 import android.net.Uri;
 import androidx.annotation.NonNull;
@@ -19,18 +18,18 @@ import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.RelativeLayout;
 import com.bumptech.glide.Glide;
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
+
 import java.io.File;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.HashMap;
 import okhttp3.MediaType;
 import okhttp3.MultipartBody;
 import okhttp3.RequestBody;
 import pms.co.pmsapp.activity.FullScreenActivity;
 import pms.co.pmsapp.R;
-import pms.co.pmsapp.database.DatabaseHelper;
+import pms.co.pmsapp.dao.RoomImagesDao;
+import pms.co.pmsapp.database.AppDatabase;
 import pms.co.pmsapp.interfaces.ApiInterface;
 import pms.co.pmsapp.libs.ApiClient;
 import pms.co.pmsapp.model.ResponseImageUpload;
@@ -43,15 +42,12 @@ public class PhotoAdapter extends RecyclerView.Adapter<PhotoAdapter.ViewHolder> 
 
     //region Variable Declaration
     private String TAG = PhotoAdapter.class.getSimpleName( );
-    private ArrayList<String> arrayList;
-    private String upload = "false";
+    private List<String> arrayList;
     private String docId;
     private Context context;
-    private int totalItem, uploadedItem;
-    private DatabaseHelper db;
-    private String latLong;
     private boolean multiSelect = false;
-    private ArrayList<String> selectedItemArray = new ArrayList<String>( );
+    private ArrayList<String> selectedItemArray = new ArrayList<>( );
+    private RoomImagesDao roomImagesDao;
     //endregion
 
     private ActionMode.Callback actionModeCallbacks = new ActionMode.Callback( ) {
@@ -70,7 +66,7 @@ public class PhotoAdapter extends RecyclerView.Adapter<PhotoAdapter.ViewHolder> 
         @Override
         public boolean onActionItemClicked(ActionMode mode, MenuItem item) {
             for (String selectedItem : selectedItemArray) {
-                deleteFileFromDB( selectedItem );
+                roomImagesDao.deleteImages( docId, selectedItem );
                 File file = new File( selectedItem );
                 file.delete( );
                 arrayList.remove( selectedItem );
@@ -88,11 +84,11 @@ public class PhotoAdapter extends RecyclerView.Adapter<PhotoAdapter.ViewHolder> 
         }
     };
 
-    public PhotoAdapter(Context context, ArrayList<String> arrayList, String docId) {
+    public PhotoAdapter(Context context, List<String> arrayList, String docId) {
         this.arrayList = arrayList;
         this.context = context;
         this.docId = docId;
-        db = new DatabaseHelper( context );
+        roomImagesDao = AppDatabase.getInstance( context ).roomImagesDao();
     }
 
     @NonNull
@@ -108,21 +104,15 @@ public class PhotoAdapter extends RecyclerView.Adapter<PhotoAdapter.ViewHolder> 
         final ViewHolder viewHolder1 = viewHolder;
         final String image = arrayList.get( i );
         viewHolder1.update( image );
-        upload = checkUpdate( docId, image );
-
-        viewHolder1.button.setOnClickListener( new View.OnClickListener( ) {
-            @Override
-            public void onClick(View view) {
-                Log.v( TAG, "position: " + viewHolder1.getAdapterPosition( ) + "   images: " + image );
-                viewHolder1.button.setVisibility( View.GONE );
-                updateDBUploaded( docId, image );
-                uploadOnServer( image );
-                getTotalUploads( );
-                sendTotalEntryRepo( );
-            }
-        } );
-
-        if (upload.equals( "true" ))
+        String isUploaded = roomImagesDao.getIsUploaded( docId, image );
+        viewHolder1.button.setOnClickListener( view -> {
+            Log.v( TAG, "position: " + viewHolder1.getAdapterPosition( ) + "   images: " + image );
+            roomImagesDao.updateIsUpload( docId, image, "true" );
+            viewHolder1.button.setVisibility( View.GONE );
+            sendTotalEntryRepo( );
+            uploadOnServer( image );
+        });
+        if (isUploaded.equals( "true" ))
             viewHolder1.button.setVisibility( View.GONE );
     }
 
@@ -194,27 +184,14 @@ public class PhotoAdapter extends RecyclerView.Adapter<PhotoAdapter.ViewHolder> 
 
     }
 
-    public String checkUpdate(String docId, String imageName) {
-        String images = db.displayDatabase( docId );
-        if (images != null) {
-            try {
-                JSONArray jsonArray = new JSONArray( images );
-                for (int i = 0; i < jsonArray.length( ); i++) {
-                    if (jsonArray.getJSONObject( i ).getString( "name" ).equals( imageName ))
-                        upload = jsonArray.getJSONObject( i ).getString( "isUploaded" );
-                    latLong = jsonArray.getJSONObject( i ).getString( "lat_long" );
-                }
-            } catch (JSONException e) {
-                Log.v( TAG, e.getLocalizedMessage( ) );
-            }
-        }
-        return upload;
-    }
-
     public void uploadOnServer(String imagePath) {
-
         Log.v( TAG, "upload this" + imagePath );
+
+        String latLong = roomImagesDao.getLatLong( docId, imagePath );
         File file = new File(imagePath);
+
+        Log.v(TAG, roomImagesDao.getLatLong( docId, imagePath ));
+
         RequestBody mFile = RequestBody.create(MediaType.parse("image/*"), file);
         MultipartBody.Part fileToUpload = MultipartBody.Part.createFormData("image", file.getName(), mFile);
         RequestBody requestdocId = RequestBody.create( MediaType.parse("text/plain"), docId);
@@ -236,72 +213,10 @@ public class PhotoAdapter extends RecyclerView.Adapter<PhotoAdapter.ViewHolder> 
         } );
     }
 
-    public void updateDBUploaded(String docId, String imageName) {
-        String update = "";
-        String images = db.displayDatabase( docId );
-        Log.d( TAG, "updateDBUploaded: " + images );
-        try {
-            JSONArray jsonArray = new JSONArray( images );
-            for (int i = 0; i < jsonArray.length( ); i++) {
-                JSONObject jsonObject = (jsonArray.getJSONObject( i ));
-                if (jsonObject.getString( "name" ).equals( imageName ) && jsonObject.getString( "isUploaded" ).equals( "false" )) {
-                    jsonObject.remove( "isUploaded" );
-                    jsonObject.put( "isUploaded", "true" );
-                    Log.d( TAG, "Changed " + imageName + " to true" );
-                }
-            }
-            update = jsonArray.toString( );
-            db.updateImages( docId, update );
-            Log.v( TAG, "Database Updated: " + db.displayDatabase( docId ) );
-        } catch (JSONException e) {
-            e.printStackTrace( );
-        }
-    }
-
-    public void deleteFileFromDB(String imageName) {
-        Cursor cursor = db.fetchdatabase( docId );
-        String images = null;
-        if (cursor.moveToFirst( ))
-            images = cursor.getString( cursor.getColumnIndex( "images" ) );
-        if (images != "")
-            try {
-                JSONArray jsonArray = new JSONArray( images );
-                Log.v( TAG, "json" + jsonArray.toString( ) );
-                for (int i = 0; i < jsonArray.length( ); i++) {
-                    JSONObject jsonObject = (jsonArray.getJSONObject( i ));
-                    if (jsonObject.getString( "name" ).equals( imageName )) {
-                        jsonArray.remove( i );
-                    }
-                }
-                Log.v( TAG, "json" + jsonArray.toString( ) );
-            } catch (JSONException e) {
-                e.printStackTrace( );
-            }
-    }
-
-    public void getTotalUploads() {
-        Cursor cursor = db.fetchdatabase( docId );
-        String images = null;
-        if (cursor.moveToFirst( ))
-            images = cursor.getString( cursor.getColumnIndex( "images" ) );
-        if (images != null)
-            try {
-                uploadedItem = 0;
-                JSONArray jsonArray1 = new JSONArray( images );
-                totalItem = jsonArray1.length( );
-                String s;
-                for (int i = 0; i < jsonArray1.length( ); i++) {
-                    JSONObject jsonObject = (jsonArray1.getJSONObject( i ));
-                    s = jsonObject.getString( "isUploaded" );
-                    if (!s.equals( "false" ))
-                        ++uploadedItem;
-                }
-            } catch (JSONException e) {
-                e.printStackTrace( );
-            }
-    }
-
     public void sendTotalEntryRepo(){
+        int totalItem = roomImagesDao.getTotalImagesPath( docId ).size();
+        int uploadedItem = roomImagesDao.getUploadedPath( docId, "true" ).size();
+
         HashMap<String, String> params = new HashMap<>( );
         params.put("total_images", String.valueOf(totalItem));
         params.put("uploaded_images", String.valueOf( uploadedItem ));
@@ -316,13 +231,11 @@ public class PhotoAdapter extends RecyclerView.Adapter<PhotoAdapter.ViewHolder> 
                     Log.d( TAG, "Total Images: success" );
                 }
             }
-
             @Override
             public void onFailure(Call<ResponseTotalImages> call, Throwable t) {
                 Log.d( TAG, "Total Images: error" );
             }
         } );
-
     }
 
 }

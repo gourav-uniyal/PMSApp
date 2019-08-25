@@ -14,7 +14,7 @@ public class Case {
     private String customer_Name;
     @SerializedName( "created_at" )
     private String date;
-    @SerializedName( "verification" )
+    @SerializedName( "verification_point" )
     private String verification;
     @SerializedName( "path" )
     private String path;
@@ -24,7 +24,7 @@ public class Case {
     private String docId;
     @SerializedName( "document_name" )
     private String docName;
-    @SerializedName( "client" )
+    @SerializedName( "client_name" )
     private String clientName;
 
     public String getCustomerName() {

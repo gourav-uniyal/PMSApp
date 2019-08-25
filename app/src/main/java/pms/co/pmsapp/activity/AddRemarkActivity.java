@@ -9,10 +9,12 @@ import android.widget.TextView;
 import android.widget.Toast;
 import java.util.HashMap;
 import pms.co.pmsapp.R;
-import pms.co.pmsapp.database.DatabaseHelper;
+import pms.co.pmsapp.dao.RoomColumnDao;
+import pms.co.pmsapp.database.AppDatabase;
 import pms.co.pmsapp.interfaces.ApiInterface;
 import pms.co.pmsapp.libs.ApiClient;
 import pms.co.pmsapp.model.ResponseRemarks;
+import pms.co.pmsapp.model.RoomColumn;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
@@ -23,7 +25,7 @@ public class AddRemarkActivity extends Activity implements View.OnClickListener 
     private EditText txtRemarks;
     private String TAG = AddRemarkActivity.class.getSimpleName( );
     private String docId;
-    private DatabaseHelper dbHelper;
+    private RoomColumnDao roomColumnDao;
     //endregion
 
     @Override
@@ -32,7 +34,7 @@ public class AddRemarkActivity extends Activity implements View.OnClickListener 
         setContentView( R.layout.activity_add_remark );
 
         docId = getIntent( ).getStringExtra( "document_id" );
-        dbHelper = new DatabaseHelper( this );
+        roomColumnDao = AppDatabase.getInstance( getApplicationContext() ).roomColumnDao();
 
         TextView lblSaveRemark = findViewById( R.id.lbl_save_remark );
         txtRemarks = findViewById( R.id.txt_remark );
@@ -45,7 +47,10 @@ public class AddRemarkActivity extends Activity implements View.OnClickListener 
         switch (view.getId( )) {
             case R.id.lbl_save_remark:
                 String remarks = txtRemarks.getText( ).toString( );
-                dbHelper.updateRemark( docId, remarks );
+                RoomColumn roomColumn = new RoomColumn();
+                roomColumn.setDocId( docId );
+                roomColumn.setRemarks( remarks );
+                roomColumnDao.insert( roomColumn );
                 uploadRemark( docId, remarks );
                 Log.v( TAG, "Remarks added" );
                 finish( );

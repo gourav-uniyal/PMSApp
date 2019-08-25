@@ -1,9 +1,6 @@
 package pms.co.pmsapp.interfaces;
 
-import org.json.JSONObject;
-
 import java.util.HashMap;
-
 import okhttp3.MultipartBody;
 import okhttp3.RequestBody;
 import pms.co.pmsapp.model.ResponseImageUpload;
@@ -15,11 +12,9 @@ import pms.co.pmsapp.model.ResponseVerification;
 import pms.co.pmsapp.model.Verifier;
 import retrofit2.Call;
 import retrofit2.http.Body;
-import retrofit2.http.GET;
 import retrofit2.http.Multipart;
 import retrofit2.http.POST;
 import retrofit2.http.Part;
-import retrofit2.http.Path;
 import retrofit2.http.Query;
 
 public interface ApiInterface {
@@ -44,7 +39,5 @@ public interface ApiInterface {
 
     @Multipart
     @POST("reports/create")
-    Call<ResponseImageUpload> uploadImage(
-            @Part("document_id") RequestBody docId, @Part("lat_long") RequestBody latLong,
-            @Part MultipartBody.Part file);
+    Call<ResponseImageUpload> uploadImage(@Part("document_id") RequestBody docId, @Part("lat_long") RequestBody latLong, @Part MultipartBody.Part file);
 }

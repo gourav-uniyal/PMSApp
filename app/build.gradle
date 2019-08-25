@@ -19,6 +19,11 @@ android {
     packagingOptions {
         exclude 'META-INF/DEPENDENCIES'
     }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
 }
 
 dependencies {
@@ -37,6 +42,9 @@ dependencies {
     implementation 'com.squareup.okhttp3:okhttp:3.10.0'
     //watermark
     implementation 'com.huangyz0918:androidwm-light:0.1.2'
+    //room
+    implementation 'androidx.room:room-runtime:2.1.0'
+    annotationProcessor 'androidx.room:room-compiler:2.1.0'
     //photoview
     implementation 'com.github.chrisbanes:PhotoView:2.1.3'
     implementation 'androidx.cardview:cardview:1.0.0'

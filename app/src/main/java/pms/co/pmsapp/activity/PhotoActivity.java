@@ -4,7 +4,6 @@ import android.Manifest;
 import android.app.Activity;
 import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
@@ -31,9 +30,6 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.android.volley.Request;
-import com.android.volley.VolleyError;
-import com.android.volley.toolbox.JsonObjectRequest;
 import com.bumptech.glide.Glide;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationCallback;
@@ -43,27 +39,24 @@ import com.google.android.gms.location.LocationServices;
 import com.watermark.androidwm_light.WatermarkBuilder;
 import com.watermark.androidwm_light.bean.WatermarkText;
 
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
-
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.OutputStream;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
+
 import id.zelory.compressor.Compressor;
 import pms.co.pmsapp.R;
 import pms.co.pmsapp.adapter.PhotoAdapter;
-import pms.co.pmsapp.database.DatabaseHelper;
+import pms.co.pmsapp.dao.RoomImagesDao;
+import pms.co.pmsapp.database.AppDatabase;
 import pms.co.pmsapp.interfaces.ApiInterface;
 import pms.co.pmsapp.libs.ApiClient;
 import pms.co.pmsapp.model.ResponseTotalImages;
 import pms.co.pmsapp.model.ResponseVerification;
+import pms.co.pmsapp.model.RoomImages;
 import pms.co.pmsapp.utils.RecyclerViewItemDecorator;
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -74,22 +67,19 @@ public class PhotoActivity extends AppCompatActivity {
     //region Variable Declaration
     private static String folderpath;
     private String TAG = PhotoActivity.class.getSimpleName( );
-    private DatabaseHelper db;
     private int count = 1;
     private static final int Request_Camera_Code = 1;
-    private ArrayList<String> arrayList;
     private PhotoAdapter photoAdapter;
     private RecyclerView rvPhotos;
     private String docId;
     private String path;
     private String formpath;
     private String verifier;
-    private JSONArray jsonArray;
     private File  actualFile;
-    private int totalItem=0, uploadedItem=0;
     private LocationRequest locationRequest;
     private FusedLocationProviderClient fusedLocationProviderClient;
     private ProgressBar progressBar;
+    private RoomImagesDao roomImagesDao;
     //endregion
 
     @Override
@@ -103,9 +93,10 @@ public class PhotoActivity extends AppCompatActivity {
         //endregion
 
         verifier = getIntent().getStringExtra("verifier");
-        Log.v(TAG, "verifier" + verifier);
 
         fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient( getApplicationContext( ) );
+
+        roomImagesDao = AppDatabase.getInstance( getApplicationContext() ).roomImagesDao();
 
         //region TOOLBAR
         Toolbar toolbar = (Toolbar) findViewById( R.id.toolbar_photo );
@@ -120,10 +111,6 @@ public class PhotoActivity extends AppCompatActivity {
         //endregion
 
         createfolder( );
-
-        db = new DatabaseHelper( this );
-
-        jsonArray = new JSONArray();
 
         //region View ID's
         TextView lblAddPhotos = findViewById( R.id.lbl_add_photos );
@@ -153,25 +140,6 @@ public class PhotoActivity extends AppCompatActivity {
         formpath = "https://pmsapp.co.in/" + formpath;
 
         lblfileId.setText( fileId );
-
-        arrayList = new ArrayList<>( );
-
-        Cursor cursor = db.fetchdatabase( docId );
-        String images = null;
-        if (cursor.moveToFirst( ))
-            images = cursor.getString( cursor.getColumnIndex( "images" ) );
-        if (images != null)
-            try {
-                JSONArray jsonArray1 = new JSONArray( images );
-                jsonArray = jsonArray1;
-                Log.d( TAG, "Initialisation: " + jsonArray.toString() );
-            } catch (JSONException e) {
-                e.printStackTrace( );
-            }
-
-        Log.v(TAG, "verifier" + verifier + "  docId" + docId);
-
-        getTotalUploads();
 
         sendTotalEntryRepo();
 
@@ -263,88 +231,52 @@ public class PhotoActivity extends AppCompatActivity {
         //endregion
 
         //region Verification Completed Button
-        btnVerifComplete.setOnClickListener( new View.OnClickListener( ) {
-            @Override
-            public void onClick(View v) {
-                progressBar.setVisibility( View.VISIBLE );
-                Cursor cursor = db.fetchdatabase( docId );
-                String images = null;
-                int flag = 0;
-                if (cursor.moveToFirst( ))
-                    images = cursor.getString( cursor.getColumnIndex( "images" ) );
-                if(images==null){
+        btnVerifComplete.setOnClickListener( v -> {
+            progressBar.setVisibility( View.VISIBLE );
+            if (roomImagesDao.getTotalImagesPath( docId ) == null) {
+                progressBar.setVisibility( View.GONE );
+                Toast.makeText( getApplicationContext( ), "No Data Found", Toast.LENGTH_SHORT ).show( );
+            } else {
+                int flag = roomImagesDao.getUploadedPath( docId, "false" ).size( );
+                if (flag > 0) {
+                    Toast.makeText( getApplicationContext( ), "Upload All Task First", Toast.LENGTH_SHORT ).show( );
                     progressBar.setVisibility( View.GONE );
-                    Toast.makeText( getApplicationContext(), "No Data Found", Toast.LENGTH_SHORT ).show();
                 }
-                else{
-                try {
-                    JSONArray jsonArray = new JSONArray( images );
-                    for (int i = 0; i < jsonArray.length( ); i++) {
-                        JSONObject jsonObject = (jsonArray.getJSONObject( i ));
-                        if (jsonObject.getString( "isUploaded" ).equals("false")) {
-                            flag = 1;
-                            break;
+                else if (flag == 0) {
+                    HashMap<String, String> params = new HashMap<>( );
+                    params.put( "verifier", verifier );
+                    params.put( "document_id", docId );
+                    ApiInterface apiInterface = ApiClient.getRetrofitInstance( ).create( ApiInterface.class );
+                    Call<ResponseVerification> call = apiInterface.verification( params );
+                    call.enqueue( new Callback<ResponseVerification>( ) {
+                        @Override
+                        public void onResponse(Call<ResponseVerification> call, Response<ResponseVerification> response) {
+                            ResponseVerification responseVerification = response.body( );
+                            if (responseVerification.getStatus( ).equals( "success" )) {
+                                progressBar.setVisibility( View.GONE );
+                                Toast.makeText( getApplicationContext( ), "Verification Completed", Toast.LENGTH_SHORT ).show( );
+                                Intent intent = new Intent( getApplicationContext( ), HomeActivity.class );
+                                intent.addFlags( Intent.FLAG_ACTIVITY_CLEAR_TOP );
+                                intent.putExtra( "verifier", verifier );
+                                startActivity( intent );
+                                finish( );
+                            }
                         }
-                    }
-                    if(flag == 1)
-                        Toast.makeText( getApplicationContext( ), "Upload All Task First", Toast.LENGTH_SHORT ).show( );
-                    else {
-                        HashMap<String, String> params = new HashMap<>( );
-                        params.put( "verifier", verifier );
-                        params.put( "document_id", docId );
-
-                        ApiInterface apiInterface = ApiClient.getRetrofitInstance().create( ApiInterface.class );
-                        Call<ResponseVerification> call = apiInterface.verification(params);
-                        call.enqueue( new Callback<ResponseVerification>( ) {
-                            @Override
-                            public void onResponse(Call<ResponseVerification> call, Response<ResponseVerification> response) {
-                                ResponseVerification responseVerification = response.body();
-                                if(responseVerification.getStatus().equals("success")){
-                                    progressBar.setVisibility( View.GONE );
-                                    Toast.makeText( getApplicationContext( ), "Verification Completed", Toast.LENGTH_SHORT ).show( );
-                                    Intent intent = new Intent(getApplicationContext(), HomeActivity.class);
-                                    intent.addFlags( Intent.FLAG_ACTIVITY_CLEAR_TOP );
-                                    intent.putExtra( "verifier", verifier);
-                                    startActivity(intent);
-                                    finish();
-                                }
-                            }
-
-                            @Override
-                            public void onFailure(Call<ResponseVerification> call, Throwable t) {
-
-                            }
-                        } );
-
-                    }
-                } catch (JSONException e) {
-                    e.printStackTrace( );
+                        @Override
+                        public void onFailure(Call<ResponseVerification> call, Throwable t) {
+                        }
+                    } );
                 }
-            }}
+            }
         } );
         //endregion
-    }
 
-    public void getTotalUploads() {
-        if(jsonArray!=null) {
-            totalItem = jsonArray.length( );
-            String s;
-            uploadedItem = 0;
-            try {
-                for (int i = 0; i < jsonArray.length( ); i++) {
-                    JSONObject jsonObject = (jsonArray.getJSONObject( i ));
-                    s = jsonObject.getString( "isUploaded" );
-                    if (!s.equals( "false" ))
-                        uploadedItem++;
-                }
-            } catch (JSONException e) {
-                e.printStackTrace( );
-            }
-        }
-        Log.v( TAG, "total Items: " + totalItem + " uploadedItems: " + uploadedItem );
     }
 
     public void sendTotalEntryRepo(){
+        int totalItem = roomImagesDao.getTotalImagesPath( docId ).size();
+        int uploadedItem = roomImagesDao.getUploadedPath( docId, "true" ).size();
+
         HashMap<String, String> params = new HashMap<>( );
         params.put("total_images", String.valueOf(totalItem));
         params.put("uploaded_images", String.valueOf( uploadedItem ));
@@ -359,13 +291,11 @@ public class PhotoActivity extends AppCompatActivity {
                     Log.d( TAG, "Total Images: success" );
                 }
             }
-
             @Override
             public void onFailure(Call<ResponseTotalImages> call, Throwable t) {
                 Log.d( TAG, "Total Images: error" );
             }
         } );
-
     }
 
     private LocationCallback mLocationCallback = new LocationCallback( ) {
@@ -398,7 +328,6 @@ public class PhotoActivity extends AppCompatActivity {
                             .build( )
                             .compressToFile( actualFile );
 
-                    Log.v( TAG, compressedImage.getAbsolutePath( ) );
                     //endregion
 
                     BitmapFactory.Options bmOptions = new BitmapFactory.Options( );
@@ -454,25 +383,13 @@ public class PhotoActivity extends AppCompatActivity {
 
                     compressedImage.delete( );
 
-                    arrayList.add( watermarkImgFile.getAbsolutePath( ) );
+                    RoomImages roomImages = new RoomImages();
+                    roomImages.setDocId( docId );
+                    roomImages.setIsUploaded( "false" );
+                    roomImages.setPath( watermarkImgFile.getAbsolutePath() );
+                    roomImages.setLat_long( storeCurrentLatLong );
 
-                    Map<String, String> map = new HashMap<>( );
-                    map.put( "name", watermarkImgFile.getAbsolutePath( ) );
-                    map.put( "isUploaded", "false" );
-                    map.put( "lat_long", storeCurrentLatLong );
-
-                    JSONObject jsonObject = new JSONObject( map );
-
-                    jsonArray.put( jsonObject );
-
-                    if (count == 0)
-                        db.updateImages( docId, jsonArray.toString( ) );
-                    else {
-                        db.insertImages( docId, jsonArray.toString( ) );
-                        count = 0;
-                    }
-
-                    Log.v(TAG, "Displaying Database: " + db.displayDatabase( docId ));
+                    roomImagesDao.insert(roomImages);
 
                     photoAdapter.notifyDataSetChanged( );
 
@@ -521,19 +438,10 @@ public class PhotoActivity extends AppCompatActivity {
         }
 
     void fetchData() {
-        count = 1;
-        File directory = new File( folderpath );
-        File[] files = directory.listFiles( );
-        for (File file : files) {
-            File imgFile = new File( folderpath + "/" + file.getName( ) );
-            if (imgFile.exists( ))
-                if (imgFile.toString( ).contains( docId + "_" )) {
-                    count = 0;
-                    arrayList.add( imgFile.toString( ) );
-                }
-        }
-        photoAdapter = new PhotoAdapter( this, arrayList, docId );
-        rvPhotos.setAdapter( photoAdapter );
+        roomImagesDao.getAllImagesPath(docId).observe( this, (List<String> list) -> {
+            photoAdapter = new PhotoAdapter( this, list, docId );
+            rvPhotos.setAdapter( photoAdapter );
+        });
     }
 
     void createfolder() {
