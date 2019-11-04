@@ -8,6 +8,8 @@ public class ResponseLogin {
     private String status;
     @SerializedName( "data" )
     private Verifier verifier;
+    @SerializedName( "message" )
+    private String message;
 
     public String getStatus() {
         return status;
@@ -15,5 +17,9 @@ public class ResponseLogin {
 
     public Verifier getVerifier() {
         return verifier;
+    }
+
+    public String getMessage() {
+        return message;
     }
 }

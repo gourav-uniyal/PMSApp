@@ -45,7 +45,6 @@ public class MainAdapter extends RecyclerView.Adapter<MainAdapter.ViewHolder> {
         } else {
             viewHolder.linearLayout.setBackgroundResource(R.color.home_row_white);
         }
-
         viewHolder.lblFileId.setText(data.getFileId());
         viewHolder.lblClientName.setText(data.getClientName());
         viewHolder.lblDate.setText(parseDateToddMMyyyy(data.getDate()));

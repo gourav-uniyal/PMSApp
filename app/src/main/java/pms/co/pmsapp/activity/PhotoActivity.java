@@ -10,6 +10,7 @@ import android.graphics.Color;
 import android.graphics.Paint;
 import android.location.Location;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Environment;
 import android.os.Looper;
 import android.os.StrictMode;
@@ -21,7 +22,6 @@ import androidx.recyclerview.widget.DefaultItemAnimator;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.appcompat.widget.Toolbar;
-
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
@@ -29,7 +29,6 @@ import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
-
 import com.bumptech.glide.Glide;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationCallback;
@@ -38,7 +37,6 @@ import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
 import com.watermark.androidwm_light.WatermarkBuilder;
 import com.watermark.androidwm_light.bean.WatermarkText;
-
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.OutputStream;
@@ -46,7 +44,6 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
-
 import id.zelory.compressor.Compressor;
 import pms.co.pmsapp.R;
 import pms.co.pmsapp.adapter.PhotoAdapter;
@@ -75,7 +72,7 @@ public class PhotoActivity extends AppCompatActivity {
     private String path;
     private String formpath;
     private String verifier;
-    private File  actualFile;
+    private File actualFile;
     private LocationRequest locationRequest;
     private FusedLocationProviderClient fusedLocationProviderClient;
     private ProgressBar progressBar;
@@ -92,11 +89,11 @@ public class PhotoActivity extends AppCompatActivity {
         StrictMode.setVmPolicy( builder.build( ) );
         //endregion
 
-        verifier = getIntent().getStringExtra("verifier");
+        verifier = getIntent( ).getStringExtra( "verifier" );
 
         fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient( getApplicationContext( ) );
 
-        roomImagesDao = AppDatabase.getInstance( getApplicationContext() ).roomImagesDao();
+        roomImagesDao = AppDatabase.getInstance( getApplicationContext( ) ).roomImagesDao( );
 
         //region TOOLBAR
         Toolbar toolbar = (Toolbar) findViewById( R.id.toolbar_photo );
@@ -105,7 +102,7 @@ public class PhotoActivity extends AppCompatActivity {
         toolbar.setNavigationOnClickListener( new View.OnClickListener( ) {
             @Override
             public void onClick(View view) {
-                finish();
+                finish( );
             }
         } );
         //endregion
@@ -130,10 +127,10 @@ public class PhotoActivity extends AppCompatActivity {
         formpath = getIntent( ).getStringExtra( "form_path" );
         String fileId = getIntent( ).getStringExtra( "fileId" );
         path = getIntent( ).getStringExtra( "path" );
-        String status = getIntent().getStringExtra( "status" );
+        String status = getIntent( ).getStringExtra( "status" );
         //endregion
 
-        if(status.equals( "complete" ))
+        if (status.equals( "complete" ))
             btnVerifComplete.setVisibility( View.GONE );
 
         path = "https://pmsapp.co.in/" + path;
@@ -141,7 +138,7 @@ public class PhotoActivity extends AppCompatActivity {
 
         lblfileId.setText( fileId );
 
-        sendTotalEntryRepo();
+        sendTotalEntryRepo( );
 
         fetchData( );
 
@@ -198,35 +195,33 @@ public class PhotoActivity extends AppCompatActivity {
         //endregion
 
         //region Add Photo ClickListener
-        lblAddPhotos.setOnClickListener( new View.OnClickListener( ) {
-            @Override
-            public void onClick(View view) {
-                Intent camera = new Intent( );
-                camera.setAction( MediaStore.ACTION_IMAGE_CAPTURE );
+        lblAddPhotos.setOnClickListener( view -> {
+            Intent camera = new Intent( );
+            camera.setAction( MediaStore.ACTION_IMAGE_CAPTURE );
+            if(Build.VERSION.SDK_INT == Build.VERSION_CODES.KITKAT) {
+                Intent cameraIntent = new Intent( android.provider.MediaStore.ACTION_IMAGE_CAPTURE );
+                String newPicFile = docId + "_" + System.currentTimeMillis( ) + ".jpg";
+                actualFile = new File( folderpath + "/" + newPicFile );
+                cameraIntent.putExtra( MediaStore.EXTRA_OUTPUT, Uri.fromFile( actualFile ) );
+                startActivityForResult( cameraIntent, Request_Camera_Code );
+            }
+            else {
                 if (camera.resolveActivity( getPackageManager( ) ) != null) {
                     String newPicFile = docId + "_" + System.currentTimeMillis( ) + ".jpg";
                     actualFile = new File( folderpath + "/" + newPicFile );
-                    if (actualFile != null) {
-                        camera.putExtra( MediaStore.EXTRA_OUTPUT,
-                                Uri.fromFile( actualFile ) );
-                        startActivityForResult( camera, Request_Camera_Code );
-                    }
+                    camera.putExtra( MediaStore.EXTRA_OUTPUT, Uri.fromFile( actualFile ) );
+                    startActivityForResult( camera, Request_Camera_Code );
                 }
             }
         } );
         //endregion
 
         //region Add Remark ClickListener
-        lblAddRemarks.setOnClickListener( new View.OnClickListener( ) {
-            @Override
-            public void onClick(View view) {
-                Intent intent = new Intent( getApplicationContext( ), AddRemarkActivity.class );
-                intent.putExtra( "document_id", docId );
-                intent.putExtra( "count", count );
-                startActivity( intent );
-            }
-
-
+        lblAddRemarks.setOnClickListener( view -> {
+            Intent intent = new Intent( getApplicationContext( ), AddRemarkActivity.class );
+            intent.putExtra( "document_id", docId );
+            intent.putExtra( "count", count );
+            startActivity( intent );
         } );
         //endregion
 
@@ -241,8 +236,7 @@ public class PhotoActivity extends AppCompatActivity {
                 if (flag > 0) {
                     Toast.makeText( getApplicationContext( ), "Upload All Task First", Toast.LENGTH_SHORT ).show( );
                     progressBar.setVisibility( View.GONE );
-                }
-                else if (flag == 0) {
+                } else if (flag == 0) {
                     HashMap<String, String> params = new HashMap<>( );
                     params.put( "verifier", verifier );
                     params.put( "document_id", docId );
@@ -262,6 +256,7 @@ public class PhotoActivity extends AppCompatActivity {
                                 finish( );
                             }
                         }
+
                         @Override
                         public void onFailure(Call<ResponseVerification> call, Throwable t) {
                         }
@@ -273,24 +268,25 @@ public class PhotoActivity extends AppCompatActivity {
 
     }
 
-    public void sendTotalEntryRepo(){
-        int totalItem = roomImagesDao.getTotalImagesPath( docId ).size();
-        int uploadedItem = roomImagesDao.getUploadedPath( docId, "true" ).size();
+    public void sendTotalEntryRepo() {
+        int totalItem = roomImagesDao.getTotalImagesPath( docId ).size( );
+        int uploadedItem = roomImagesDao.getUploadedPath( docId, "true" ).size( );
 
         HashMap<String, String> params = new HashMap<>( );
-        params.put("total_images", String.valueOf(totalItem));
-        params.put("uploaded_images", String.valueOf( uploadedItem ));
+        params.put( "total_images", String.valueOf( totalItem ) );
+        params.put( "uploaded_images", String.valueOf( uploadedItem ) );
         params.put( "document_id", docId );
-        ApiInterface apiInterface = ApiClient.getRetrofitInstance().create( ApiInterface.class );
-        Call<ResponseTotalImages> call = apiInterface.totalImages(params);
+        ApiInterface apiInterface = ApiClient.getRetrofitInstance( ).create( ApiInterface.class );
+        Call<ResponseTotalImages> call = apiInterface.totalImages( params );
         call.enqueue( new Callback<ResponseTotalImages>( ) {
             @Override
             public void onResponse(Call<ResponseTotalImages> call, retrofit2.Response<ResponseTotalImages> response) {
-                ResponseTotalImages responseTotalImages = response.body();
-                if(responseTotalImages.getStatus().equals( "success" )){
+                ResponseTotalImages responseTotalImages = response.body( );
+                if (responseTotalImages.getStatus( ).equals( "success" )) {
                     Log.d( TAG, "Total Images: success" );
                 }
             }
+
             @Override
             public void onFailure(Call<ResponseTotalImages> call, Throwable t) {
                 Log.d( TAG, "Total Images: error" );
@@ -310,7 +306,7 @@ public class PhotoActivity extends AppCompatActivity {
                 Location location = locationList.get( locationList.size( ) - 1 );
                 longitude = location.getLongitude( );
                 latitude = location.getLatitude( );
-                latLong = "lat: "+latitude + ", long: " + longitude;
+                latLong = "lat: " + latitude + ", long: " + longitude;
                 String storeCurrentLatLong = latLong;
 
                 if (storeCurrentLatLong != null) {
@@ -333,8 +329,8 @@ public class PhotoActivity extends AppCompatActivity {
                     BitmapFactory.Options bmOptions = new BitmapFactory.Options( );
                     Bitmap bitmap = BitmapFactory.decodeFile( compressedImage.getAbsolutePath( ), bmOptions );
 
-                    SimpleDateFormat sdf = new SimpleDateFormat("dd.MM.yyyy '('HH:mm:ss')' ");
-                    String currentDateandTime = sdf.format(new Date());
+                    SimpleDateFormat sdf = new SimpleDateFormat( "dd.MM.yyyy '('HH:mm:ss')' " );
+                    String currentDateandTime = sdf.format( new Date( ) );
 
                     //region WaterMark Implementation
                     WatermarkText watermarkText, watermarkText1;
@@ -355,9 +351,9 @@ public class PhotoActivity extends AppCompatActivity {
 
                     watermarkText1 = new WatermarkText( currentDateandTime )
                             .setPositionX( 0 )
-                            .setPositionY(((watermarkText.getTextSize())*0.01)/3)
+                            .setPositionY( ((watermarkText.getTextSize( )) * 0.01) / 3 )
                             .setTextAlpha( 255 )
-                            .setTextColor( Color.YELLOW)
+                            .setTextColor( Color.YELLOW )
                             .setRotation( 0 )
                             .setTextSize( 10 );
 
@@ -383,13 +379,13 @@ public class PhotoActivity extends AppCompatActivity {
 
                     compressedImage.delete( );
 
-                    RoomImages roomImages = new RoomImages();
+                    RoomImages roomImages = new RoomImages( );
                     roomImages.setDocId( docId );
                     roomImages.setIsUploaded( "false" );
-                    roomImages.setPath( watermarkImgFile.getAbsolutePath() );
+                    roomImages.setPath( watermarkImgFile.getAbsolutePath( ) );
                     roomImages.setLat_long( storeCurrentLatLong );
 
-                    roomImagesDao.insert(roomImages);
+                    roomImagesDao.insert( roomImages );
 
                     photoAdapter.notifyDataSetChanged( );
 
@@ -434,14 +430,14 @@ public class PhotoActivity extends AppCompatActivity {
                 progressBar.setVisibility( View.VISIBLE );
                 fusedLocationProviderClient.requestLocationUpdates( locationRequest, mLocationCallback, Looper.myLooper( ) );
             }
-            }
         }
+    }
 
     void fetchData() {
-        roomImagesDao.getAllImagesPath(docId).observe( this, (List<String> list) -> {
+        roomImagesDao.getAllImagesPath( docId ).observe( this, (List<String> list) -> {
             photoAdapter = new PhotoAdapter( this, list, docId );
             rvPhotos.setAdapter( photoAdapter );
-        });
+        } );
     }
 
     void createfolder() {
@@ -457,6 +453,6 @@ public class PhotoActivity extends AppCompatActivity {
 
     @Override
     public void onBackPressed() {
-        finish();
+        finish( );
     }
 }

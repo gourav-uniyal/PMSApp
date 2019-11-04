@@ -35,6 +35,7 @@
             android:theme="@style/Theme.AppCompat.Dialog.Alert" />
         <activity
             android:name=".activity.PhotoActivity"
+            android:label="PMSApp"
             android:theme="@style/AppTheme.NoActionBar" />
 
         <service android:name=".service.CheckLocationService" />
@@ -63,6 +64,7 @@
         <meta-data
             android:name="preloaded_fonts"
             android:resource="@array/preloaded_fonts" />
+
     </application>
 
 </manifest>

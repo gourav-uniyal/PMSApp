@@ -10,6 +10,16 @@ public class Verifier {
     private String email;
     @SerializedName( "password" )
     private String password;
+    @SerializedName( "name" )
+    private String name;
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
 
     public Verifier(String email, String password) {
         this.email = email;

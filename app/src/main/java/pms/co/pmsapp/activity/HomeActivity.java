@@ -14,6 +14,7 @@ import androidx.appcompat.widget.Toolbar;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import pms.co.pmsapp.R;
@@ -43,6 +44,12 @@ public class HomeActivity extends AppCompatActivity {
 
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
+
+        String name = getIntent().getStringExtra( "name" );
+
+        TextView lblToolBarTitle = findViewById(R.id.lbl_toolbar_title);
+        lblToolBarTitle.setText( "("+name+")" );
+
 
         verifier = getIntent().getStringExtra("verifier");
 

@@ -65,14 +65,11 @@ public class CompletedTasksFragment extends Fragment {
 
         //region SwipeRefresh Layout
         swipeRefreshLayout = view.findViewById( R.id.swipe_refresh_layout_completed_task );
-        swipeRefreshLayout.setOnRefreshListener( new SwipeRefreshLayout.OnRefreshListener( ) {
-            @Override
-            public void onRefresh() {
-                progressDialog.show( );
-                arrayList.clear( );
-                getData( PAGE_START );
-            }
-        });
+        swipeRefreshLayout.setOnRefreshListener( () -> {
+            progressDialog.show( );
+            arrayList.clear( );
+            getData( PAGE_START );
+        } );
         //endregion
 
         arrayList = new ArrayList<>( );
@@ -84,6 +81,7 @@ public class CompletedTasksFragment extends Fragment {
         recyclerView.setLayoutManager( linearLayoutManager );
         recyclerView.addItemDecoration( new SimpleDividerItemDecoration( context ) );
 
+        progressDialog.show( );
         getData( PAGE_START );
 
         mainAdapter = new MainAdapter( arrayList );
@@ -95,9 +93,10 @@ public class CompletedTasksFragment extends Fragment {
                 super.onScrolled( recyclerView, dx, dy );
                 int lastVisibleItem = 0;
                 int totalItemCount = Objects.requireNonNull( recyclerView.getAdapter( ) ).getItemCount( );
-                lastVisibleItem = ((LinearLayoutManager) Objects.requireNonNull( recyclerView.getLayoutManager( ) )).findLastVisibleItemPosition( );
                 if (PAGE_START < TOTAL_PAGE) {
+                    lastVisibleItem = ((LinearLayoutManager) Objects.requireNonNull( recyclerView.getLayoutManager( ) )).findLastVisibleItemPosition( );
                     if (lastVisibleItem == totalItemCount - 1) {
+                        lastVisibleItem = 0;
                         ++CURRENT_PAGE;
                         getData( CURRENT_PAGE );
                     }
@@ -132,7 +131,6 @@ public class CompletedTasksFragment extends Fragment {
 
     private void getData(int page) {
 
-        progressDialog.show( );
         HashMap<String, String> veri = new HashMap<>();
         veri.put("verifier", verifier);
 
@@ -142,9 +140,9 @@ public class CompletedTasksFragment extends Fragment {
             @Override
             public void onResponse(Call<ResponseTask> call, Response<ResponseTask> response) {
                 ResponseTask responseTask = response.body();
-                if(responseTask.getResponseData()!=null){
+                if(responseTask!=null){
                     ResponseData responseData = responseTask.getResponseData();
-                    if(responseData.getCaseArrayList()!=null){
+                    if(responseData!=null){
                         TOTAL_PAGE = Integer.parseInt(responseData.getTotalPage());
                         arrayList.addAll(responseData.getCaseArrayList());
                         mainAdapter.notifyDataSetChanged();
@@ -158,6 +156,5 @@ public class CompletedTasksFragment extends Fragment {
                 Toast.makeText( getActivity(), "Error on loading Response", Toast.LENGTH_SHORT ).show();
             }
         } );
-
     }
 }

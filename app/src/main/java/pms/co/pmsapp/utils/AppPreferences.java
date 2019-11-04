@@ -8,6 +8,7 @@ public class AppPreferences {
     private SharedPreferences mPreferences;
     private static String KEY_EMAIL = "email";
     private static String KEY_NAME = "name";
+    private static String VERIFIER_ID = "verifier";
     private SharedPreferences.Editor editor;
 
     public AppPreferences(Context mContext) {
@@ -33,6 +34,16 @@ public class AppPreferences {
 
     public String getName() {
         return mPreferences.getString(KEY_NAME, null);
+    }
+
+
+    public void setVerifier(String name) {
+        editor.putString(VERIFIER_ID, name);
+        editor.apply();
+    }
+
+    public String getVerifier() {
+        return mPreferences.getString(VERIFIER_ID, null);
     }
 
     public void clear() {

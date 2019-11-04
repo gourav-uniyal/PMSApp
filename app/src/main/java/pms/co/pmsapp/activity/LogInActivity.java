@@ -6,6 +6,7 @@ import android.os.StrictMode;
 import androidx.appcompat.app.AppCompatActivity;
 import android.os.Bundle;
 import android.text.TextUtils;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
@@ -40,7 +41,8 @@ public class LogInActivity extends AppCompatActivity {
         final AppPreferences appPreferences = new AppPreferences( this );
         if (appPreferences.getEmail() != null) {
             Intent intent = new Intent(getApplicationContext(), HomeActivity.class);
-            intent.putExtra( "verifier", appPreferences.getName() );
+            intent.putExtra( "verifier", appPreferences.getVerifier() );
+            intent.putExtra( "name", appPreferences.getEmail() );
             startActivity( intent );
             finish();
         }
@@ -57,57 +59,61 @@ public class LogInActivity extends AppCompatActivity {
         progressDialog.setTitle("Logging In");
         progressDialog.setMessage("Please Wait...");
 
-        btnLogin.setOnClickListener( new View.OnClickListener( ) {
-            @Override
-            public void onClick(View view) {
+        btnLogin.setOnClickListener( view -> {
+
+            boolean isEmptyField = false;
+
+            final String email  = txt_email.getText().toString().trim();
+            final String password  = txt_password.getText().toString().trim();
+
+            if (TextUtils.isEmpty(email)){
+                isEmptyField = true;
+                txt_email.setError("required");
+            }
+            if (TextUtils.isEmpty(password)){
+                isEmptyField = true;
+                txt_password.setError("required");
+            }
+            if (!email.contains("@")) {
+                txt_email.setError("enter valid email address");
+                isEmptyField = true;
+            }
+            if (!isEmptyField) {
 
                 progressDialog.show();
 
-                boolean isEmptyField = false;
+                Verifier verifier = new Verifier(email, password);
 
-                final String email  = txt_email.getText().toString().trim();
-                final String password  = txt_password.getText().toString().trim();
-
-                if (TextUtils.isEmpty(email)){
-                    isEmptyField = true;
-                    txt_email.setError("required");
-                }
-                if (TextUtils.isEmpty(password)){
-                    isEmptyField = true;
-                    txt_password.setError("required");
-                }
-                if (!email.contains("@")) {
-                    txt_email.setError("this doesn't look like an email id");
-                    isEmptyField = true;
-                }
-                if (!isEmptyField) {
-                    Verifier verifier = new Verifier(email, password);
-
-                    ApiInterface apiInterface = ApiClient.getRetrofitInstance().create( ApiInterface.class );
-                    Call<ResponseLogin> call = apiInterface.userLogin( verifier);
-                    call.enqueue( new Callback<ResponseLogin>( ) {
-                        @Override
-                        public void onResponse(Call<ResponseLogin> call, Response<ResponseLogin> response) {
-                            ResponseLogin responseLogin = response.body();
-                            if(responseLogin.getStatus().equals( "success" )){
-                                progressDialog.dismiss();
-                                appPreferences.setName( responseLogin.getVerifier().getVerifier() );
-                                appPreferences.setEmail( responseLogin.getVerifier().getEmail() );
-                                String verifier = responseLogin.getVerifier().getVerifier();
-                                Intent intent = new Intent(getApplicationContext(), HomeActivity.class);
-                                intent.putExtra( "verifier" ,verifier);
-                                startActivity(intent);
-                                finish();
-                            }
+                ApiInterface apiInterface = ApiClient.getRetrofitInstance().create( ApiInterface.class );
+                Call<ResponseLogin> call = apiInterface.userLogin( verifier);
+                call.enqueue( new Callback<ResponseLogin>( ) {
+                    @Override
+                    public void onResponse(Call<ResponseLogin> call, Response<ResponseLogin> response) {
+                        ResponseLogin responseLogin = response.body();
+                        progressDialog.dismiss();
+                        if(responseLogin.getStatus().equals( "success" )){
+                            appPreferences.setVerifier( responseLogin.getVerifier().getVerifier() );
+                            appPreferences.setEmail( responseLogin.getVerifier().getName() );
+                            Log.v( TAG, responseLogin.getVerifier().getName() );
+                            String verifier = responseLogin.getVerifier().getVerifier();
+                            Intent intent = new Intent(getApplicationContext(), HomeActivity.class);
+                            intent.putExtra( "verifier" ,verifier);
+                            intent.putExtra( "name", responseLogin.getVerifier().getName() );
+                            startActivity(intent);
+                            finish();
                         }
-                        @Override
-                        public void onFailure(Call<ResponseLogin> call, Throwable t) {
-                            Toast.makeText(getApplicationContext(), "Email or Password is Incorrect", Toast.LENGTH_SHORT).show();
-                        }
-                    } );
+                        if(responseLogin.getStatus().equals( "error" ))
+                            Toast.makeText( LogInActivity.this, "Email or Password is incorrect", Toast.LENGTH_SHORT ).show( );
 
-                }
+                    }
+                    @Override
+                    public void onFailure(Call<ResponseLogin> call, Throwable t) {
+                        progressDialog.dismiss();
+                        Toast.makeText(getApplicationContext(), "Email or Password is Incorrect", Toast.LENGTH_SHORT).show();
+                    }
+                } );
+
             }
-        });
+        } );
     }
 }
