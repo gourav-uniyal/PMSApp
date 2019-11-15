@@ -3,6 +3,8 @@ package pms.co.pmsapp.fragment;
 import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.Intent;
+import android.content.res.ColorStateList;
+import android.graphics.Color;
 import android.os.Bundle;
 import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
@@ -13,6 +15,7 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ProgressBar;
 import android.widget.Toast;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -39,12 +42,12 @@ public class CompletedTasksFragment extends Fragment {
     private ArrayList<Case> arrayList;
     private String verifier;
     private MainAdapter mainAdapter;
-    public int PAGE_START = 1;
-    public int TOTAL_PAGE = 1;
-    public int CURRENT_PAGE = PAGE_START;
+    private int PAGE_START = 1;
+    private int TOTAL_PAGE = 1;
     private ProgressDialog progressDialog;
     private RecyclerView recyclerView;
     private SwipeRefreshLayout swipeRefreshLayout;
+    private ProgressBar progressBar;
     //endregion
 
     @Override
@@ -63,12 +66,18 @@ public class CompletedTasksFragment extends Fragment {
         progressDialog.setCanceledOnTouchOutside( true );
         //endregion
 
+        //region Footer Progress Bar
+        progressBar = view.findViewById(R.id.progressBar_completed_task);
+        progressBar.setVisibility( View.GONE );
+        //endregion
+
         //region SwipeRefresh Layout
         swipeRefreshLayout = view.findViewById( R.id.swipe_refresh_layout_completed_task );
         swipeRefreshLayout.setOnRefreshListener( () -> {
             progressDialog.show( );
             arrayList.clear( );
-            getData( PAGE_START );
+            PAGE_START = 1;
+            getData( 1 );
         } );
         //endregion
 
@@ -82,7 +91,7 @@ public class CompletedTasksFragment extends Fragment {
         recyclerView.addItemDecoration( new SimpleDividerItemDecoration( context ) );
 
         progressDialog.show( );
-        getData( PAGE_START );
+        getData( 1 );
 
         mainAdapter = new MainAdapter( arrayList );
         recyclerView.setAdapter( mainAdapter );
@@ -93,12 +102,12 @@ public class CompletedTasksFragment extends Fragment {
                 super.onScrolled( recyclerView, dx, dy );
                 int lastVisibleItem = 0;
                 int totalItemCount = Objects.requireNonNull( recyclerView.getAdapter( ) ).getItemCount( );
+                lastVisibleItem = ((LinearLayoutManager) Objects.requireNonNull( recyclerView.getLayoutManager( ) )).findLastVisibleItemPosition( );
                 if (PAGE_START < TOTAL_PAGE) {
-                    lastVisibleItem = ((LinearLayoutManager) Objects.requireNonNull( recyclerView.getLayoutManager( ) )).findLastVisibleItemPosition( );
                     if (lastVisibleItem == totalItemCount - 1) {
-                        lastVisibleItem = 0;
-                        ++CURRENT_PAGE;
-                        getData( CURRENT_PAGE );
+                        progressBar.setVisibility( View.VISIBLE );
+                        ++PAGE_START;
+                        getData( PAGE_START );
                     }
                 }
             }
@@ -143,6 +152,7 @@ public class CompletedTasksFragment extends Fragment {
                 if(responseTask!=null){
                     ResponseData responseData = responseTask.getResponseData();
                     if(responseData!=null){
+                        progressBar.setVisibility( View.GONE );
                         TOTAL_PAGE = Integer.parseInt(responseData.getTotalPage());
                         arrayList.addAll(responseData.getCaseArrayList());
                         mainAdapter.notifyDataSetChanged();

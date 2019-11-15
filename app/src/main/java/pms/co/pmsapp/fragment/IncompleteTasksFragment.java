@@ -13,6 +13,7 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ProgressBar;
 import android.widget.Toast;
 
 import java.util.ArrayList;
@@ -42,12 +43,12 @@ public class IncompleteTasksFragment extends Fragment  {
     private ArrayList<Case> arrayList;
     private MainAdapter mainAdapter;
     private String verifier;
-    public int PAGE_START = 1;
-    public int TOTAL_PAGE=1;
-    public int CURRENT_PAGE = PAGE_START;
+    private int PAGE_START = 1;
+    private int TOTAL_PAGE = 1;
     private ProgressDialog progressDialog;
     private SwipeRefreshLayout swipeRefreshLayout;
     private RecyclerView recyclerView;
+    private ProgressBar progressBar;
     //endregion
 
     @Override
@@ -65,15 +66,17 @@ public class IncompleteTasksFragment extends Fragment  {
 
         //region swipeRefreshLayout
         swipeRefreshLayout = view.findViewById( R.id.swipe_refresh_layout_incompleted_task );
-        swipeRefreshLayout.setOnRefreshListener( new SwipeRefreshLayout.OnRefreshListener( ) {
-            @Override
-            public void onRefresh() {
-                progressDialog.show();
-                arrayList.clear();
-                mainAdapter.notifyDataSetChanged();
-                getData(PAGE_START);
-            }
+        swipeRefreshLayout.setOnRefreshListener( () -> {
+            progressDialog.show();
+            arrayList.clear();
+            mainAdapter.notifyDataSetChanged();
+            getData(1);
         } );
+        //endregion
+
+        //region Footer Progress Bar
+        progressBar = view.findViewById(R.id.progressBar_incompleted_task);
+        progressBar.setVisibility( View.GONE );
         //endregion
 
         verifier = getArguments().getString("verifier");
@@ -87,7 +90,8 @@ public class IncompleteTasksFragment extends Fragment  {
         recyclerView.setLayoutManager(linearLayoutManager);
         recyclerView.addItemDecoration(new SimpleDividerItemDecoration(context));
 
-        getData(PAGE_START);
+        progressDialog.show();
+        getData(1);
 
         mainAdapter = new MainAdapter( arrayList );
         recyclerView.setAdapter(mainAdapter);
@@ -100,10 +104,10 @@ public class IncompleteTasksFragment extends Fragment  {
                 int totalItemCount = Objects.requireNonNull( recyclerView.getAdapter( ) ).getItemCount();
                 lastVisibleItem = ((LinearLayoutManager) Objects.requireNonNull( recyclerView.getLayoutManager( ) )).findLastVisibleItemPosition( );
                 if (PAGE_START < TOTAL_PAGE) {
-                    progressDialog.show();
                     if (lastVisibleItem == totalItemCount - 1) {
-                        ++CURRENT_PAGE;
-                        getData( CURRENT_PAGE );
+                        progressBar.setVisibility( View.VISIBLE );
+                        ++PAGE_START;
+                        getData( PAGE_START );
                     }
                 }
             }
@@ -133,10 +137,7 @@ public class IncompleteTasksFragment extends Fragment  {
         return view;
     }
 
-
     private void getData(final int page) {
-
-        progressDialog.show( );
 
         HashMap<String, String> veri = new HashMap<>();
         veri.put("verifier", verifier);
@@ -150,6 +151,7 @@ public class IncompleteTasksFragment extends Fragment  {
                 if(responseTask.getResponseData()!=null){
                     ResponseData responseData = responseTask.getResponseData();
                     if(responseData.getCaseArrayList()!=null){
+                        progressBar.setVisibility( View.GONE );
                         TOTAL_PAGE = Integer.parseInt(responseData.getTotalPage());
                         arrayList.addAll(responseData.getCaseArrayList());
                         progressDialog.dismiss();
@@ -163,7 +165,5 @@ public class IncompleteTasksFragment extends Fragment  {
                 Toast.makeText( getActivity(), "Error on loading Response", Toast.LENGTH_SHORT ).show();
             }
         } );
-
     }
-
 }

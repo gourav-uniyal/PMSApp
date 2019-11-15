@@ -6,7 +6,7 @@ import java.util.ArrayList;
 
 public class ResponseData {
 
-    @SerializedName( "total" )
+    @SerializedName( "last_page" )
     private String totalPage;
     @SerializedName("current_page")
     private String currentPage;
@@ -24,5 +24,4 @@ public class ResponseData {
     public String getTotalPage() {
         return totalPage;
     }
-
 }

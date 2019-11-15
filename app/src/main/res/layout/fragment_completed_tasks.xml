@@ -14,7 +14,14 @@
             android:id="@+id/rvCompletedTasks"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:scrollbars="vertical"></androidx.recyclerview.widget.RecyclerView>
+            android:scrollbars="vertical" />
     </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
+
+    <ProgressBar
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/home_row_white"
+        android:layout_gravity="bottom"
+        android:id="@+id/progressBar_completed_task"/>
 
 </FrameLayout>
