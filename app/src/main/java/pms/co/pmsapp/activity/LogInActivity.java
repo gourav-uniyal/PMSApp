@@ -51,8 +51,7 @@ public class LogInActivity extends AppCompatActivity {
         txt_email = findViewById( R.id.txt_email );
         txt_password = findViewById( R.id.txt_password );
 
-        StrictMode.ThreadPolicy policy = new
-                StrictMode.ThreadPolicy.Builder().permitAll().build();
+        StrictMode.ThreadPolicy policy = new StrictMode.ThreadPolicy.Builder().permitAll().build();
         StrictMode.setThreadPolicy(policy);
 
         progressDialog = new ProgressDialog(this);
@@ -112,7 +111,6 @@ public class LogInActivity extends AppCompatActivity {
                         Toast.makeText(getApplicationContext(), "Email or Password is Incorrect", Toast.LENGTH_SHORT).show();
                     }
                 } );
-
             }
         } );
     }
