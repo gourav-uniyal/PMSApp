@@ -99,12 +99,7 @@ public class PhotoActivity extends AppCompatActivity {
         Toolbar toolbar = (Toolbar) findViewById( R.id.toolbar_photo );
         setSupportActionBar( toolbar );
         toolbar.setNavigationIcon( R.drawable.ic_arrow_back_black_24dp );
-        toolbar.setNavigationOnClickListener( new View.OnClickListener( ) {
-            @Override
-            public void onClick(View view) {
-                finish( );
-            }
-        } );
+        toolbar.setNavigationOnClickListener( view -> finish( ) );
         //endregion
 
         createfolder( );
@@ -119,10 +114,10 @@ public class PhotoActivity extends AppCompatActivity {
         ImageView imgPath = findViewById( R.id.img_path );
         ImageView imgFormPath = findViewById( R.id.img_form_path );
         Button btnVerifComplete = findViewById( R.id.btn_photo_verification_completed );
+        rvPhotos = findViewById( R.id.rvPhotos );
         //endregion
 
         //region Intent GetData
-        rvPhotos = findViewById( R.id.rvPhotos );
         docId = getIntent( ).getStringExtra( "document_id" );
         formpath = getIntent( ).getStringExtra( "form_path" );
         String fileId = getIntent( ).getStringExtra( "fileId" );
@@ -294,6 +289,24 @@ public class PhotoActivity extends AppCompatActivity {
         } );
     }
 
+    void fetchData() {
+        roomImagesDao.getAllImagesPath( docId ).observe( this, (List<String> list) -> {
+            photoAdapter = new PhotoAdapter( this, list, docId );
+            rvPhotos.setAdapter( photoAdapter );
+        } );
+    }
+
+    void createfolder() {
+        boolean success = true;
+        File folder = new File( Environment.getExternalStorageDirectory( ) + File.separator + "PMS App" );
+        if (!folder.exists( )) {
+            success = folder.mkdirs( );
+        }
+
+        if (success)
+            folderpath = folder.getAbsolutePath( );
+    }
+
     private LocationCallback mLocationCallback = new LocationCallback( ) {
         @Override
         public void onLocationResult(LocationResult locationResult) {
@@ -431,24 +444,6 @@ public class PhotoActivity extends AppCompatActivity {
                 fusedLocationProviderClient.requestLocationUpdates( locationRequest, mLocationCallback, Looper.myLooper( ) );
             }
         }
-    }
-
-    void fetchData() {
-        roomImagesDao.getAllImagesPath( docId ).observe( this, (List<String> list) -> {
-            photoAdapter = new PhotoAdapter( this, list, docId );
-            rvPhotos.setAdapter( photoAdapter );
-        } );
-    }
-
-    void createfolder() {
-        boolean success = true;
-        File folder = new File( Environment.getExternalStorageDirectory( ) + File.separator + "PMS App" );
-        if (!folder.exists( )) {
-            success = folder.mkdirs( );
-        }
-
-        if (success)
-            folderpath = folder.getAbsolutePath( );
     }
 
     @Override

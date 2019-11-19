@@ -16,6 +16,8 @@ import android.view.ViewGroup;
 import android.widget.ProgressBar;
 import android.widget.Toast;
 
+import com.ferfalk.simplesearchview.SimpleSearchView;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Objects;
@@ -55,46 +57,17 @@ public class IncompleteTasksFragment extends Fragment  {
     public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_incomplete_tasks, container, false);
+
         context = getActivity();
-
-        //region Progress Dialog
-        progressDialog = new ProgressDialog(context);
-        progressDialog.setTitle("Loading");
-        progressDialog.setMessage("Please Wait...");
-        progressDialog.setCanceledOnTouchOutside( false );
-        //endregion
-
-        //region swipeRefreshLayout
-        swipeRefreshLayout = view.findViewById( R.id.swipe_refresh_layout_incompleted_task );
-        swipeRefreshLayout.setOnRefreshListener( () -> {
-            progressDialog.show();
-            arrayList.clear();
-            mainAdapter.notifyDataSetChanged();
-            getData(1);
-        } );
-        //endregion
-
-        //region Footer Progress Bar
-        progressBar = view.findViewById(R.id.progressBar_incompleted_task);
-        progressBar.setVisibility( View.GONE );
-        //endregion
 
         verifier = getArguments().getString("verifier");
 
-        arrayList = new ArrayList<>();
-
-        LinearLayoutManager linearLayoutManager = new LinearLayoutManager(context);
-        linearLayoutManager.setOrientation( RecyclerView.VERTICAL );
-
-        recyclerView = (RecyclerView) view.findViewById( R.id.rvIncompleteTasks );
-        recyclerView.setLayoutManager(linearLayoutManager);
-        recyclerView.addItemDecoration(new SimpleDividerItemDecoration(context));
+        initProgressView( view );
+        initRecylerView( view );
+        initSwipeRefreshLayout( view );
 
         progressDialog.show();
-        getData(1);
-
-        mainAdapter = new MainAdapter( arrayList );
-        recyclerView.setAdapter(mainAdapter);
+        getData(1, "", "all");
 
         recyclerView.addOnScrollListener( new RecyclerView.OnScrollListener( ) {
             @Override
@@ -107,7 +80,7 @@ public class IncompleteTasksFragment extends Fragment  {
                     if (lastVisibleItem == totalItemCount - 1) {
                         progressBar.setVisibility( View.VISIBLE );
                         ++PAGE_START;
-                        getData( PAGE_START );
+                        getData( PAGE_START, "", "all" );
                     }
                 }
             }
@@ -137,13 +110,15 @@ public class IncompleteTasksFragment extends Fragment  {
         return view;
     }
 
-    private void getData(final int page) {
+    private void getData(final int page, String key, String type) {
 
         HashMap<String, String> veri = new HashMap<>();
         veri.put("verifier", verifier);
 
+        Log.d( TAG, "getData: " + key + type );
+
         ApiInterface apiInterface = ApiClient.getRetrofitInstance().create( ApiInterface.class );
-        Call<ResponseTask> call = apiInterface.incompletedTask( veri, page);
+        Call<ResponseTask> call = apiInterface.incompletedTask( veri, page, key, type);
         call.enqueue( new Callback<ResponseTask>( ) {
             @Override
             public void onResponse(Call<ResponseTask> call, Response<ResponseTask> response) {
@@ -165,5 +140,47 @@ public class IncompleteTasksFragment extends Fragment  {
                 Toast.makeText( getActivity(), "Error on loading Response", Toast.LENGTH_SHORT ).show();
             }
         } );
+    }
+
+    void initProgressView(View view){
+        //dialog progress bar
+        progressDialog = new ProgressDialog(context);
+        progressDialog.setTitle("Loading");
+        progressDialog.setMessage("Please Wait...");
+        progressDialog.setCanceledOnTouchOutside( false );
+
+        //footer progress bar
+        progressBar = view.findViewById(R.id.progressBar_incompleted_task);
+        progressBar.setVisibility( View.GONE );
+    }
+
+    void initSwipeRefreshLayout(View view){
+
+        swipeRefreshLayout = view.findViewById( R.id.swipe_refresh_layout_incompleted_task );
+        swipeRefreshLayout.setOnRefreshListener( () -> {
+            progressDialog.show();
+            arrayList.clear();
+            mainAdapter.notifyDataSetChanged();
+            getData(1, "", "all");
+        } );
+    }
+
+    void initRecylerView(View view){
+        arrayList = new ArrayList<>();
+        LinearLayoutManager linearLayoutManager = new LinearLayoutManager(context);
+        linearLayoutManager.setOrientation( RecyclerView.VERTICAL );
+
+        recyclerView = (RecyclerView) view.findViewById( R.id.rvIncompleteTasks );
+        recyclerView.setLayoutManager(linearLayoutManager);
+        recyclerView.addItemDecoration(new SimpleDividerItemDecoration(context));
+
+        mainAdapter = new MainAdapter( arrayList );
+        recyclerView.setAdapter(mainAdapter);
+    }
+
+    public void beginSearch(String key, String type){
+        Log.d( TAG, "beginSearch: " + key + type );
+
+        getData( PAGE_START , key, type);
     }
 }
