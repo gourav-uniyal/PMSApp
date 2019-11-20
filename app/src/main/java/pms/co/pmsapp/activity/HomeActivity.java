@@ -144,6 +144,10 @@ public class HomeActivity extends AppCompatActivity {
         searchView.setOnSearchClickListener( v -> {
             spinner.setVisibility( View.VISIBLE );
         } );
+        searchView.setOnCloseListener( () -> {
+            spinner.setVisibility( View.GONE );
+            return false;
+        } );
 
         // listening to search query text change
         searchView.setOnQueryTextListener( new SearchView.OnQueryTextListener( ) {

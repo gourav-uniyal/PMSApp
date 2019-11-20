@@ -127,6 +127,8 @@ public class IncompleteTasksFragment extends Fragment  {
                     ResponseData responseData = responseTask.getResponseData();
                     if(responseData.getCaseArrayList()!=null){
                         progressBar.setVisibility( View.GONE );
+                        if(!key.equals( "" ))
+                            Log.d( TAG, "onResponse: " + responseTask.getStatus() + key + type + "api hit hui search se");
                         TOTAL_PAGE = Integer.parseInt(responseData.getTotalPage());
                         arrayList.addAll(responseData.getCaseArrayList());
                         progressDialog.dismiss();

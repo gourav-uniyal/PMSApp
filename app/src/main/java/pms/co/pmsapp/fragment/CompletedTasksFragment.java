@@ -129,7 +129,8 @@ public class CompletedTasksFragment extends Fragment {
                     ResponseData responseData = responseTask.getResponseData();
                     if(responseData!=null){
                         progressBar.setVisibility( View.GONE );
-                        Log.d( TAG, "onResponse: " + responseTask.getStatus() + key + type );
+                        if(!key.equals( "" ))
+                            Log.d( TAG, "onResponse: " + responseTask.getStatus() + key + type + "api hit hui search se");
                         TOTAL_PAGE = Integer.parseInt(responseData.getTotalPage());
                         arrayList.addAll(responseData.getCaseArrayList());
                         mainAdapter.notifyDataSetChanged();
