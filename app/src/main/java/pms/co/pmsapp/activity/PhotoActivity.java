@@ -68,10 +68,13 @@ public class PhotoActivity extends AppCompatActivity {
     private static final int Request_Camera_Code = 1;
     private PhotoAdapter photoAdapter;
     private RecyclerView rvPhotos;
+
     private String docId;
     private String path;
     private String formpath;
     private String verifier;
+    private String status;
+
     private File actualFile;
     private LocationRequest locationRequest;
     private FusedLocationProviderClient fusedLocationProviderClient;
@@ -122,7 +125,7 @@ public class PhotoActivity extends AppCompatActivity {
         formpath = getIntent( ).getStringExtra( "form_path" );
         String fileId = getIntent( ).getStringExtra( "fileId" );
         path = getIntent( ).getStringExtra( "path" );
-        String status = getIntent( ).getStringExtra( "status" );
+        status = getIntent( ).getStringExtra( "status" );
         //endregion
 
         if (status.equals( "complete" ))
@@ -223,7 +226,7 @@ public class PhotoActivity extends AppCompatActivity {
         //region Verification Completed Button
         btnVerifComplete.setOnClickListener( v -> {
             progressBar.setVisibility( View.VISIBLE );
-            if (roomImagesDao.getTotalImagesPath( docId ) == null) {
+            if (roomImagesDao.getTotalImagesPath( docId ).size() == 0) {
                 progressBar.setVisibility( View.GONE );
                 Toast.makeText( getApplicationContext( ), "No Data Found", Toast.LENGTH_SHORT ).show( );
             } else {
@@ -263,6 +266,9 @@ public class PhotoActivity extends AppCompatActivity {
 
     }
 
+    /**
+     * this function sends the total and uploaded number of image to server for keeping track.
+     */
     public void sendTotalEntryRepo() {
         int totalItem = roomImagesDao.getTotalImagesPath( docId ).size( );
         int uploadedItem = roomImagesDao.getUploadedPath( docId, "true" ).size( );
@@ -291,7 +297,7 @@ public class PhotoActivity extends AppCompatActivity {
 
     void fetchData() {
         roomImagesDao.getAllImagesPath( docId ).observe( this, (List<String> list) -> {
-            photoAdapter = new PhotoAdapter( this, list, docId );
+            photoAdapter = new PhotoAdapter( this, list, docId, status );
             rvPhotos.setAdapter( photoAdapter );
         } );
     }
@@ -432,6 +438,7 @@ public class PhotoActivity extends AppCompatActivity {
         if (fusedLocationProviderClient != null)
             fusedLocationProviderClient.removeLocationUpdates( mLocationCallback );
     }
+
 
     @Override
     public void onActivityResult(int requestCode, int resultCode, Intent data) {

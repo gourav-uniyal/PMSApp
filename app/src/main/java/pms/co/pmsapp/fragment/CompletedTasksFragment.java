@@ -39,15 +39,24 @@ public class CompletedTasksFragment extends Fragment {
     //region Variable Declaration
     private static final String TAG = CompletedTasksFragment.class.getSimpleName( );
     private Context context;
+
     private ArrayList<Case> arrayList;
-    private String verifier;
-    private MainAdapter mainAdapter;
+    private ArrayList<Case> filterArrayList;
+    private ArrayList<Case> normalArrayList;
+
     private int PAGE_START = 1;
     private int TOTAL_PAGE = 1;
+    private int FILTER_PAGE = 1;
+
+    private String verifier;
+    private MainAdapter mainAdapter;
     private ProgressDialog progressDialog;
     private RecyclerView recyclerView;
     private SwipeRefreshLayout swipeRefreshLayout;
     private ProgressBar progressBar;
+
+    private String key="";
+    private String type="all";
     //endregion
 
     @Override
@@ -60,6 +69,8 @@ public class CompletedTasksFragment extends Fragment {
         verifier = getArguments( ).getString( "verifier" );
 
         arrayList = new ArrayList<>( );
+        filterArrayList = new ArrayList<>();
+        normalArrayList = new ArrayList<>();
 
         initProgressViews( view );
 
@@ -68,7 +79,7 @@ public class CompletedTasksFragment extends Fragment {
         initRecyclerView(view);
 
         progressDialog.show( );
-        getData( 1, "", "all" );
+        getData( 1, key, type );
 
         recyclerView.addOnScrollListener( new RecyclerView.OnScrollListener( ) {
             @Override
@@ -77,15 +88,27 @@ public class CompletedTasksFragment extends Fragment {
                 int lastVisibleItem = 0;
                 int totalItemCount = Objects.requireNonNull( recyclerView.getAdapter( ) ).getItemCount( );
                 lastVisibleItem = ((LinearLayoutManager) Objects.requireNonNull( recyclerView.getLayoutManager( ) )).findLastVisibleItemPosition( );
-                if (PAGE_START < TOTAL_PAGE) {
-                    if (lastVisibleItem == totalItemCount - 1) {
-                        progressBar.setVisibility( View.VISIBLE );
-                        ++PAGE_START;
-                        getData( PAGE_START, "", "all" );
-                    }
+
+                if(!key.equals( "" )) {
+                    if (FILTER_PAGE < TOTAL_PAGE)
+                        if (lastVisibleItem == totalItemCount - 1) {
+                            progressBar.setVisibility( View.VISIBLE );
+                            ++FILTER_PAGE;
+                            Log.d( TAG, "onScrolled: " + key + type );
+                            getData( FILTER_PAGE, key, type );
+                        }
+                }
+                else {
+                    if (PAGE_START < TOTAL_PAGE)
+                        if (lastVisibleItem == totalItemCount - 1) {
+                            progressBar.setVisibility( View.VISIBLE );
+                            ++PAGE_START;
+                            Log.d( TAG, "onScrolled: " + key + type );
+                            getData( PAGE_START, key, type );
+                        }
                 }
             }
-        } );
+        });
 
         recyclerView.addOnItemTouchListener( new RecyclerTouchListener( context, recyclerView, new RecyclerTouchListener.ClickListener( ) {
             @Override
@@ -117,8 +140,6 @@ public class CompletedTasksFragment extends Fragment {
         HashMap<String, String> veri = new HashMap<>();
         veri.put("verifier", verifier);
 
-        Log.d( TAG, "getData: " + key + type );
-
         ApiInterface apiInterface = ApiClient.getRetrofitInstance().create( ApiInterface.class );
         Call<ResponseTask> call = apiInterface.completedTask( veri, page, key, type);
         call.enqueue( new Callback<ResponseTask>( ) {
@@ -129,11 +150,19 @@ public class CompletedTasksFragment extends Fragment {
                     ResponseData responseData = responseTask.getResponseData();
                     if(responseData!=null){
                         progressBar.setVisibility( View.GONE );
-                        if(!key.equals( "" ))
-                            Log.d( TAG, "onResponse: " + responseTask.getStatus() + key + type + "api hit hui search se");
-                        TOTAL_PAGE = Integer.parseInt(responseData.getTotalPage());
-                        arrayList.addAll(responseData.getCaseArrayList());
+                        arrayList.clear();
+                        if(!key.equals( "" )) {
+                            Log.d( TAG, "onResponse: " + responseTask.getStatus( ) + " key: " + key + " type: " + type + " filter arraylist initialise" + FILTER_PAGE + " <-filterpage" );
+                            filterArrayList.addAll(responseTask.getResponseData().getCaseArrayList());
+                            arrayList.addAll(filterArrayList);
+                        }
+                        else {
+                            Log.d( TAG, "onResponse: " + responseTask.getStatus( ) + " key: " + key + " type: " + type + " normal arraylist initialise" + + PAGE_START + " <-pagestart" );
+                            normalArrayList.addAll(responseTask.getResponseData().getCaseArrayList());
+                            arrayList.addAll(normalArrayList);
+                        }
                         mainAdapter.notifyDataSetChanged();
+                        TOTAL_PAGE = Integer.parseInt(responseData.getTotalPage());
                         progressDialog.dismiss();
                         swipeRefreshLayout.setRefreshing( false );
                     }
@@ -161,10 +190,19 @@ public class CompletedTasksFragment extends Fragment {
 
         swipeRefreshLayout = view.findViewById( R.id.swipe_refresh_layout_completed_task );
         swipeRefreshLayout.setOnRefreshListener( () -> {
-            progressDialog.show( );
-            arrayList.clear( );
-            PAGE_START = 1;
-            getData( 1 , "", "all");
+            if(!key.equals( "" )) {
+                filterArrayList.clear( );
+                Log.d( TAG, "initSwipeRefreshLayout: " + key + type );
+                FILTER_PAGE = 1;
+                getData( FILTER_PAGE, key, type );
+            }
+            else {
+                normalArrayList.clear( );
+                Log.d( TAG, "initSwipeRefreshLayout: " + key + type);
+                PAGE_START = 1;
+                getData( PAGE_START , key, type);
+            }
+
         } );
 
     }
@@ -184,6 +222,27 @@ public class CompletedTasksFragment extends Fragment {
     public void beginSearch(String key, String type){
         Log.d( TAG, "beginSearch: " + key + type );
 
-        getData( PAGE_START , key, type);
+        this.key = key;
+        this.type = type;
+
+        progressDialog.show();
+
+        filterArrayList.clear();
+
+        FILTER_PAGE = 1;
+        getData( FILTER_PAGE, this.key, this.type);
+    }
+
+    public void endSearch(String key, String type){
+
+        this.key = key;
+        this.type = type;
+
+        arrayList.clear();
+        arrayList.addAll(normalArrayList);
+
+        Log.d( TAG, "endSearch: " + "arraylist initialised to normal" );
+
+        mainAdapter.notifyDataSetChanged();
     }
 }

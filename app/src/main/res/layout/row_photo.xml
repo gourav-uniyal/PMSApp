@@ -2,7 +2,7 @@
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_marginTop="10dp"
     android:layout_width="100dp"
-    android:layout_height="170dp"
+    android:layout_height="wrap_content"
     android:id="@+id/relative_Layout_item"
     android:background="@drawable/rectangle_item_layout"
     android:padding="6dp">
@@ -11,7 +11,8 @@
         android:layout_marginTop="5dp"
         android:id="@+id/imgPic"
         android:layout_width="match_parent"
-        android:layout_height="110dp"/>
+        android:layout_height="110dp"
+        android:layout_marginBottom="10dp"/>
 
     <Button
         android:id="@+id/btn_upload_photo"
@@ -21,10 +22,9 @@
         android:layout_below="@+id/imgPic"
         android:layout_centerHorizontal="true"
         android:backgroundTint="#ededed"
-        android:layout_marginTop="6dp"
         android:text="Upload"
         android:textColor="@color/colorPrimary"
-        android:textSize="10dp" />
+        android:textSize="10sp" />
 
 
 </RelativeLayout>
