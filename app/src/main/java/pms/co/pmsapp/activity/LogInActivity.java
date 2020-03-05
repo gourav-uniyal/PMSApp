@@ -81,6 +81,7 @@ public class LogInActivity extends AppCompatActivity {
                 progressDialog.show();
 
                 Verifier verifier = new Verifier(email, password);
+                Log.d("###########", "reached");
 
                 ApiInterface apiInterface = ApiClient.getRetrofitInstance().create( ApiInterface.class );
                 Call<ResponseLogin> call = apiInterface.userLogin( verifier);
