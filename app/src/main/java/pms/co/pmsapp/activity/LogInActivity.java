@@ -7,7 +7,6 @@ import androidx.appcompat.app.AppCompatActivity;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.util.Log;
-import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Toast;
@@ -51,8 +50,7 @@ public class LogInActivity extends AppCompatActivity {
         txt_email = findViewById( R.id.txt_email );
         txt_password = findViewById( R.id.txt_password );
 
-        StrictMode.ThreadPolicy policy = new
-                StrictMode.ThreadPolicy.Builder().permitAll().build();
+        StrictMode.ThreadPolicy policy = new StrictMode.ThreadPolicy.Builder().permitAll().build();
         StrictMode.setThreadPolicy(policy);
 
         progressDialog = new ProgressDialog(this);
@@ -83,6 +81,7 @@ public class LogInActivity extends AppCompatActivity {
                 progressDialog.show();
 
                 Verifier verifier = new Verifier(email, password);
+                Log.d("###########", "reached");
 
                 ApiInterface apiInterface = ApiClient.getRetrofitInstance().create( ApiInterface.class );
                 Call<ResponseLogin> call = apiInterface.userLogin( verifier);
@@ -95,9 +94,9 @@ public class LogInActivity extends AppCompatActivity {
                             appPreferences.setVerifier( responseLogin.getVerifier().getVerifier() );
                             appPreferences.setEmail( responseLogin.getVerifier().getName() );
                             Log.v( TAG, responseLogin.getVerifier().getName() );
-                            String verifier = responseLogin.getVerifier().getVerifier();
+                            String verifierId = responseLogin.getVerifier().getVerifier();
                             Intent intent = new Intent(getApplicationContext(), HomeActivity.class);
-                            intent.putExtra( "verifier" ,verifier);
+                            intent.putExtra( "verifier", verifierId);
                             intent.putExtra( "name", responseLogin.getVerifier().getName() );
                             startActivity(intent);
                             finish();
@@ -112,7 +111,6 @@ public class LogInActivity extends AppCompatActivity {
                         Toast.makeText(getApplicationContext(), "Email or Password is Incorrect", Toast.LENGTH_SHORT).show();
                     }
                 } );
-
             }
         } );
     }

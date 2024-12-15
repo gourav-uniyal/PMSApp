@@ -17,6 +17,8 @@ import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.RelativeLayout;
+import android.widget.Toast;
+
 import com.bumptech.glide.Glide;
 
 import java.io.File;
@@ -44,6 +46,7 @@ public class PhotoAdapter extends RecyclerView.Adapter<PhotoAdapter.ViewHolder> 
     private String TAG = PhotoAdapter.class.getSimpleName( );
     private List<String> arrayList;
     private String docId;
+    private String status;
     private Context context;
     private boolean multiSelect = false;
     private ArrayList<String> selectedItemArray = new ArrayList<>( );
@@ -84,10 +87,11 @@ public class PhotoAdapter extends RecyclerView.Adapter<PhotoAdapter.ViewHolder> 
         }
     };
 
-    public PhotoAdapter(Context context, List<String> arrayList, String docId) {
+    public PhotoAdapter(Context context, List<String> arrayList, String docId, String status) {
         this.arrayList = arrayList;
         this.context = context;
         this.docId = docId;
+        this.status = status;
         roomImagesDao = AppDatabase.getInstance( context ).roomImagesDao();
     }
 
@@ -103,17 +107,26 @@ public class PhotoAdapter extends RecyclerView.Adapter<PhotoAdapter.ViewHolder> 
     public void onBindViewHolder(@NonNull ViewHolder viewHolder, int i) {
         final ViewHolder viewHolder1 = viewHolder;
         final String image = arrayList.get( i );
-        viewHolder1.update( image );
-        String isUploaded = roomImagesDao.getIsUploaded( docId, image );
-        viewHolder1.button.setOnClickListener( view -> {
-            Log.v( TAG, "position: " + viewHolder1.getAdapterPosition( ) + "   images: " + image );
-            roomImagesDao.updateIsUpload( docId, image, "true" );
+        if(status.equals( "complete" )){
+            Uri photoUri = Uri.fromFile( new File( image ) );
             viewHolder1.button.setVisibility( View.GONE );
-            sendTotalEntryRepo( );
-            uploadOnServer( image );
-        });
-        if (isUploaded.equals( "true" ))
-            viewHolder1.button.setVisibility( View.GONE );
+            Glide.with( context ).load( photoUri ).into( viewHolder1.imageview );
+            viewHolder1.imageview.setOnClickListener( v -> {
+                Intent intent = new Intent( context, FullScreenActivity.class );
+                intent.putExtra( "photo", image );
+                context.startActivity( intent );
+            } );
+        }
+        else if(status.equals( "incomplete" )) {
+            viewHolder1.update( image );
+            String isUploaded = roomImagesDao.getIsUploaded( docId, image );
+            viewHolder1.button.setOnClickListener( view -> {
+                Log.v( TAG, "position: " + viewHolder1.getAdapterPosition( ) + "   images: " + image );
+                uploadOnServer( image, viewHolder1.button );
+            });
+            if (isUploaded.equals( "true" ))
+                viewHolder1.button.setVisibility( View.GONE );
+        }
     }
 
     @Override
@@ -184,14 +197,11 @@ public class PhotoAdapter extends RecyclerView.Adapter<PhotoAdapter.ViewHolder> 
 
     }
 
-    public void uploadOnServer(String imagePath) {
+    public void uploadOnServer(String imagePath, Button button) {
         Log.v( TAG, "upload this" + imagePath );
-
         String latLong = roomImagesDao.getLatLong( docId, imagePath );
         File file = new File(imagePath);
-
         Log.v(TAG, roomImagesDao.getLatLong( docId, imagePath ));
-
         RequestBody mFile = RequestBody.create(MediaType.parse("image/*"), file);
         MultipartBody.Part fileToUpload = MultipartBody.Part.createFormData("image", file.getName(), mFile);
         RequestBody requestdocId = RequestBody.create( MediaType.parse("text/plain"), docId);
@@ -203,12 +213,18 @@ public class PhotoAdapter extends RecyclerView.Adapter<PhotoAdapter.ViewHolder> 
             @Override
             public void onResponse(Call<ResponseImageUpload> call, Response<ResponseImageUpload> response) {
                 ResponseImageUpload responseImageUpload = response.body();
-                if(responseImageUpload.getStatus().equals("success"))
-                    Log.v(TAG, "Image Uploaded Successfully");
+                if(responseImageUpload.getStatus().equals("success")) {
+                    Log.v( TAG, "Image Uploaded Successfully" );
+                    Toast.makeText( context, "Uploaded Successfully", Toast.LENGTH_SHORT ).show( );
+                    roomImagesDao.updateIsUpload( docId, imagePath, "true" );
+                    button.setVisibility( View.GONE );
+                    sendTotalEntryRepo( );
+                }
             }
             @Override
             public void onFailure(Call<ResponseImageUpload> call, Throwable t) {
                 Log.v(TAG, "Image Upload Failed");
+                Toast.makeText( context, "Failed to Image Upload", Toast.LENGTH_SHORT ).show( );
             }
         } );
     }
@@ -237,5 +253,4 @@ public class PhotoAdapter extends RecyclerView.Adapter<PhotoAdapter.ViewHolder> 
             }
         } );
     }
-
 }

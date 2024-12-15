@@ -68,10 +68,13 @@ public class PhotoActivity extends AppCompatActivity {
     private static final int Request_Camera_Code = 1;
     private PhotoAdapter photoAdapter;
     private RecyclerView rvPhotos;
+
     private String docId;
     private String path;
     private String formpath;
     private String verifier;
+    private String status;
+
     private File actualFile;
     private LocationRequest locationRequest;
     private FusedLocationProviderClient fusedLocationProviderClient;
@@ -99,12 +102,7 @@ public class PhotoActivity extends AppCompatActivity {
         Toolbar toolbar = (Toolbar) findViewById( R.id.toolbar_photo );
         setSupportActionBar( toolbar );
         toolbar.setNavigationIcon( R.drawable.ic_arrow_back_black_24dp );
-        toolbar.setNavigationOnClickListener( new View.OnClickListener( ) {
-            @Override
-            public void onClick(View view) {
-                finish( );
-            }
-        } );
+        toolbar.setNavigationOnClickListener( view -> finish( ) );
         //endregion
 
         createfolder( );
@@ -119,15 +117,15 @@ public class PhotoActivity extends AppCompatActivity {
         ImageView imgPath = findViewById( R.id.img_path );
         ImageView imgFormPath = findViewById( R.id.img_form_path );
         Button btnVerifComplete = findViewById( R.id.btn_photo_verification_completed );
+        rvPhotos = findViewById( R.id.rvPhotos );
         //endregion
 
         //region Intent GetData
-        rvPhotos = findViewById( R.id.rvPhotos );
         docId = getIntent( ).getStringExtra( "document_id" );
         formpath = getIntent( ).getStringExtra( "form_path" );
         String fileId = getIntent( ).getStringExtra( "fileId" );
         path = getIntent( ).getStringExtra( "path" );
-        String status = getIntent( ).getStringExtra( "status" );
+        status = getIntent( ).getStringExtra( "status" );
         //endregion
 
         if (status.equals( "complete" ))
@@ -228,7 +226,7 @@ public class PhotoActivity extends AppCompatActivity {
         //region Verification Completed Button
         btnVerifComplete.setOnClickListener( v -> {
             progressBar.setVisibility( View.VISIBLE );
-            if (roomImagesDao.getTotalImagesPath( docId ) == null) {
+            if (roomImagesDao.getTotalImagesPath( docId ).size() == 0) {
                 progressBar.setVisibility( View.GONE );
                 Toast.makeText( getApplicationContext( ), "No Data Found", Toast.LENGTH_SHORT ).show( );
             } else {
@@ -268,6 +266,9 @@ public class PhotoActivity extends AppCompatActivity {
 
     }
 
+    /**
+     * this function sends the total and uploaded number of image to server for keeping track.
+     */
     public void sendTotalEntryRepo() {
         int totalItem = roomImagesDao.getTotalImagesPath( docId ).size( );
         int uploadedItem = roomImagesDao.getUploadedPath( docId, "true" ).size( );
@@ -292,6 +293,24 @@ public class PhotoActivity extends AppCompatActivity {
                 Log.d( TAG, "Total Images: error" );
             }
         } );
+    }
+
+    void fetchData() {
+        roomImagesDao.getAllImagesPath( docId ).observe( this, (List<String> list) -> {
+            photoAdapter = new PhotoAdapter( this, list, docId, status );
+            rvPhotos.setAdapter( photoAdapter );
+        } );
+    }
+
+    void createfolder() {
+        boolean success = true;
+        File folder = new File( Environment.getExternalStorageDirectory( ) + File.separator + "PMS App" );
+        if (!folder.exists( )) {
+            success = folder.mkdirs( );
+        }
+
+        if (success)
+            folderpath = folder.getAbsolutePath( );
     }
 
     private LocationCallback mLocationCallback = new LocationCallback( ) {
@@ -420,6 +439,7 @@ public class PhotoActivity extends AppCompatActivity {
             fusedLocationProviderClient.removeLocationUpdates( mLocationCallback );
     }
 
+
     @Override
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult( requestCode, resultCode, data );
@@ -431,24 +451,6 @@ public class PhotoActivity extends AppCompatActivity {
                 fusedLocationProviderClient.requestLocationUpdates( locationRequest, mLocationCallback, Looper.myLooper( ) );
             }
         }
-    }
-
-    void fetchData() {
-        roomImagesDao.getAllImagesPath( docId ).observe( this, (List<String> list) -> {
-            photoAdapter = new PhotoAdapter( this, list, docId );
-            rvPhotos.setAdapter( photoAdapter );
-        } );
-    }
-
-    void createfolder() {
-        boolean success = true;
-        File folder = new File( Environment.getExternalStorageDirectory( ) + File.separator + "PMS App" );
-        if (!folder.exists( )) {
-            success = folder.mkdirs( );
-        }
-
-        if (success)
-            folderpath = folder.getAbsolutePath( );
     }
 
     @Override

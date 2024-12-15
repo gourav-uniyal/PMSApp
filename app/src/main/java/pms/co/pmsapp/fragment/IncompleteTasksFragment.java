@@ -3,6 +3,7 @@ package pms.co.pmsapp.fragment;
 import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.Intent;
+import android.inputmethodservice.Keyboard;
 import android.os.Bundle;
 import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
@@ -15,6 +16,8 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ProgressBar;
 import android.widget.Toast;
+
+import com.ferfalk.simplesearchview.SimpleSearchView;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -40,61 +43,45 @@ public class IncompleteTasksFragment extends Fragment  {
     //region Variable Declaration
     private static final String TAG = IncompleteTasksFragment.class.getSimpleName();
     private Context context;
+
     private ArrayList<Case> arrayList;
-    private MainAdapter mainAdapter;
-    private String verifier;
+    private ArrayList<Case> filterArrayList;
+    private ArrayList<Case> normalArrayList;
+
     private int PAGE_START = 1;
     private int TOTAL_PAGE = 1;
+    private int FILTER_PAGE = 1;
+
+    private MainAdapter mainAdapter;
+    private String verifier;
     private ProgressDialog progressDialog;
     private SwipeRefreshLayout swipeRefreshLayout;
     private RecyclerView recyclerView;
     private ProgressBar progressBar;
+
+    private String key="";
+    private String type="all";
     //endregion
 
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_incomplete_tasks, container, false);
+
         context = getActivity();
-
-        //region Progress Dialog
-        progressDialog = new ProgressDialog(context);
-        progressDialog.setTitle("Loading");
-        progressDialog.setMessage("Please Wait...");
-        progressDialog.setCanceledOnTouchOutside( false );
-        //endregion
-
-        //region swipeRefreshLayout
-        swipeRefreshLayout = view.findViewById( R.id.swipe_refresh_layout_incompleted_task );
-        swipeRefreshLayout.setOnRefreshListener( () -> {
-            progressDialog.show();
-            arrayList.clear();
-            mainAdapter.notifyDataSetChanged();
-            getData(1);
-        } );
-        //endregion
-
-        //region Footer Progress Bar
-        progressBar = view.findViewById(R.id.progressBar_incompleted_task);
-        progressBar.setVisibility( View.GONE );
-        //endregion
 
         verifier = getArguments().getString("verifier");
 
         arrayList = new ArrayList<>();
+        filterArrayList = new ArrayList<>();
+        normalArrayList = new ArrayList<>();
 
-        LinearLayoutManager linearLayoutManager = new LinearLayoutManager(context);
-        linearLayoutManager.setOrientation( RecyclerView.VERTICAL );
-
-        recyclerView = (RecyclerView) view.findViewById( R.id.rvIncompleteTasks );
-        recyclerView.setLayoutManager(linearLayoutManager);
-        recyclerView.addItemDecoration(new SimpleDividerItemDecoration(context));
+        initProgressView( view );
+        initRecylerView( view );
+        initSwipeRefreshLayout( view );
 
         progressDialog.show();
-        getData(1);
-
-        mainAdapter = new MainAdapter( arrayList );
-        recyclerView.setAdapter(mainAdapter);
+        getData(1, key, type);
 
         recyclerView.addOnScrollListener( new RecyclerView.OnScrollListener( ) {
             @Override
@@ -103,12 +90,24 @@ public class IncompleteTasksFragment extends Fragment  {
                 int lastVisibleItem = 0;
                 int totalItemCount = Objects.requireNonNull( recyclerView.getAdapter( ) ).getItemCount();
                 lastVisibleItem = ((LinearLayoutManager) Objects.requireNonNull( recyclerView.getLayoutManager( ) )).findLastVisibleItemPosition( );
-                if (PAGE_START < TOTAL_PAGE) {
-                    if (lastVisibleItem == totalItemCount - 1) {
-                        progressBar.setVisibility( View.VISIBLE );
-                        ++PAGE_START;
-                        getData( PAGE_START );
-                    }
+
+                if(!key.equals( "" )) {
+                    if (FILTER_PAGE < TOTAL_PAGE)
+                        if (lastVisibleItem == totalItemCount - 1) {
+                            progressBar.setVisibility( View.VISIBLE );
+                            ++FILTER_PAGE;
+                            Log.d( TAG, "onScrolled: " + key + type );
+                            getData( FILTER_PAGE, key, type );
+                        }
+                }
+                else {
+                    if (PAGE_START < TOTAL_PAGE)
+                        if (lastVisibleItem == totalItemCount - 1) {
+                            progressBar.setVisibility( View.VISIBLE );
+                            ++PAGE_START;
+                            Log.d( TAG, "onScrolled: " + key + type );
+                            getData( PAGE_START, key, type );
+                        }
                 }
             }
         } );
@@ -137,13 +136,15 @@ public class IncompleteTasksFragment extends Fragment  {
         return view;
     }
 
-    private void getData(final int page) {
+    private void getData(final int page, String key, String type) {
 
         HashMap<String, String> veri = new HashMap<>();
         veri.put("verifier", verifier);
 
+        Log.d( TAG, "getData: " + key + type );
+
         ApiInterface apiInterface = ApiClient.getRetrofitInstance().create( ApiInterface.class );
-        Call<ResponseTask> call = apiInterface.incompletedTask( veri, page);
+        Call<ResponseTask> call = apiInterface.incompletedTask( veri, page, key, type);
         call.enqueue( new Callback<ResponseTask>( ) {
             @Override
             public void onResponse(Call<ResponseTask> call, Response<ResponseTask> response) {
@@ -152,12 +153,22 @@ public class IncompleteTasksFragment extends Fragment  {
                     ResponseData responseData = responseTask.getResponseData();
                     if(responseData.getCaseArrayList()!=null){
                         progressBar.setVisibility( View.GONE );
+                        arrayList.clear();
+                        if(!key.equals( "" )) {
+                            Log.d( TAG, "onResponse: " + responseTask.getStatus( ) + " key: " + key + " type: " + type + " filter arraylist initialise" );
+                            filterArrayList.addAll(responseTask.getResponseData().getCaseArrayList());
+                            arrayList.addAll(filterArrayList);
+                        }
+                        else {
+                            Log.d( TAG, "onResponse: " + responseTask.getStatus( ) + " key: " + key + " type: " + type + " normal arraylist initialise" );
+                            normalArrayList.addAll(responseTask.getResponseData().getCaseArrayList());
+                            arrayList.addAll(normalArrayList);
+                        }
+                        mainAdapter.notifyDataSetChanged();
                         TOTAL_PAGE = Integer.parseInt(responseData.getTotalPage());
-                        arrayList.addAll(responseData.getCaseArrayList());
                         progressDialog.dismiss();
                         swipeRefreshLayout.setRefreshing( false );
                     }
-                    mainAdapter.notifyDataSetChanged();
                 }
             }
             @Override
@@ -165,5 +176,75 @@ public class IncompleteTasksFragment extends Fragment  {
                 Toast.makeText( getActivity(), "Error on loading Response", Toast.LENGTH_SHORT ).show();
             }
         } );
+    }
+
+    void initProgressView(View view){
+        //dialog progress bar
+        progressDialog = new ProgressDialog(context);
+        progressDialog.setTitle("Loading");
+        progressDialog.setMessage("Please Wait...");
+        progressDialog.setCanceledOnTouchOutside( false );
+
+        //footer progress bar
+        progressBar = view.findViewById(R.id.progressBar_incompleted_task);
+        progressBar.setVisibility( View.GONE );
+    }
+
+    void initSwipeRefreshLayout(View view){
+
+        swipeRefreshLayout = view.findViewById( R.id.swipe_refresh_layout_incompleted_task );
+        swipeRefreshLayout.setOnRefreshListener( () -> {
+            if(!key.equals( "" )) {
+                filterArrayList.clear( );
+                Log.d( TAG, "initSwipeRefreshLayout: " + key + type );
+                FILTER_PAGE = 1;
+                getData( FILTER_PAGE, key, type );
+            }
+            else {
+                normalArrayList.clear( );
+                Log.d( TAG, "initSwipeRefreshLayout: " + key + type);
+                PAGE_START = 1;
+                getData( PAGE_START , key, type);
+            }
+        } );
+    }
+
+    void initRecylerView(View view){
+        LinearLayoutManager linearLayoutManager = new LinearLayoutManager(context);
+        linearLayoutManager.setOrientation( RecyclerView.VERTICAL );
+
+        recyclerView = (RecyclerView) view.findViewById( R.id.rvIncompleteTasks );
+        recyclerView.setLayoutManager(linearLayoutManager);
+        recyclerView.addItemDecoration(new SimpleDividerItemDecoration(context));
+
+        mainAdapter = new MainAdapter( arrayList );
+        recyclerView.setAdapter(mainAdapter);
+    }
+
+    public void beginSearch(String key, String type){
+        Log.d( TAG, "beginSearch: " + key + type );
+
+        this.key = key;
+        this.type = type;
+
+        progressDialog.show();
+
+        filterArrayList.clear();
+
+        FILTER_PAGE = 1;
+        getData( FILTER_PAGE, this.key, this.type);
+    }
+
+    public void endSearch(String key, String type){
+
+        this.key = key;
+        this.type = type;
+
+        arrayList.clear();
+        arrayList.addAll(normalArrayList);
+
+        Log.d( TAG, "endSearch: " + "arraylist initialised to normal" );
+
+        mainAdapter.notifyDataSetChanged();
     }
 }

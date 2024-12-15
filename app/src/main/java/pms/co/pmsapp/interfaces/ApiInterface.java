@@ -19,14 +19,16 @@ import retrofit2.http.Query;
 
 public interface ApiInterface {
 
+
+    @POST("auth/login")
+    Call<ResponseLogin> userLogin(@Body Verifier verifier);
+
     @POST("tasks?status=complete")
-    Call<ResponseTask> completedTask(@Body HashMap verifier, @Query( "page" ) int page);
+    Call<ResponseTask> completedTask(@Body HashMap verifier, @Query( "page" ) int page, @Query( "key" ) String key, @Query( "type" ) String type);
 
     @POST("tasks?status=incomplete")
-    Call<ResponseTask> incompletedTask(@Body HashMap verifier, @Query( "page" ) int page);
+    Call<ResponseTask> incompletedTask(@Body HashMap verifier, @Query( "page" ) int page, @Query( "key" ) String key, @Query( "type" ) String type);
 
-    @POST("login")
-    Call<ResponseLogin> userLogin(@Body Verifier verifier);
 
     @POST("total-images")
     Call<ResponseTotalImages> totalImages(@Body HashMap map);
